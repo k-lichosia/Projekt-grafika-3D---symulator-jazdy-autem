@@ -36,6 +36,7 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include "map_geometry.h"
 
 #include "city_map.h"
+#include "Car.h"
 
 #pragma comment(lib, "glew32s.lib")
 #pragma comment(lib, "glfw3.lib")
@@ -49,14 +50,13 @@ float aspectRatio=1;
 
 ShaderProgram *sp;
 
-
+Car autoGracza(0.0f, 0.5f, -2.0f);
 //Odkomentuj, żeby rysować kostkę
 float* vertices = myCubeVertices;
 float* normals = myCubeNormals;
 float* texCoords = myCubeTexCoords;
 float* colors = myCubeColors;
 int vertexCount = myCubeVertexCount;
-
 
 //Odkomentuj, żeby rysować czajnik
 //float* vertices = myTeapotVertices;
@@ -121,17 +121,56 @@ void freeOpenGLProgram(GLFWwindow* window) {
 void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// Ustawienie kamery (widok zza auta)
+	// Kamera patrzy z (0, 3, -10) na (0, 0, 10)
 	glm::mat4 V = glm::lookAt(glm::vec3(0, 3, -10), glm::vec3(0, 0, 10), glm::vec3(0, 1, 0));
 	glm::mat4 P = glm::perspective(50.0f * PI / 180.0f, aspectRatio, 0.01f, 200.0f);
 
+	// 1. RYSOWANIE MAPY
 	spMap->use();
 	glUniformMatrix4fv(spMap->u("P"), 1, false, glm::value_ptr(P));
 	glUniformMatrix4fv(spMap->u("V"), 1, false, glm::value_ptr(V));
-
-	// WYWOŁANIE TWOJEJ MAPY
 	renderCity(spMap, dist);
 
+	// 2. RYSOWANIE SAMOCHODU
+	glUseProgram(0);
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadMatrixf(glm::value_ptr(P));
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadMatrixf(glm::value_ptr(V));
+
+	glPushMatrix();
+	// 1. Przesunięcie do pozycji auta na drodze
+	glTranslatef(autoGracza.x, autoGracza.y, autoGracza.z);
+
+	// ========================================================
+	// 2. SKRĘCANIE I PRZECHYLANIE (Efekt "ukosu")
+	// Mnożnik określa jak mocno auto reaguje. 
+	// Wartość speed_x przy wciśnięciu to około 1.5 lub -1.5
+	// ========================================================
+
+	// Skręt "nosa" samochodu w lewo/prawo (Yaw)
+	float katSkretu = speed_x * 15.0f;
+	glRotatef(90.0f - katSkretu, 0.0f, 1.0f, 0.0f);
+
+	// Opcjonalny przechył karoserii na boki (Body Roll)
+	// Jeśli auto przechyla się w złą stronę, usuń znak minusa!
+	//float przechyl = -speed_x * 5.0f;
+	//glRotatef(przechyl, 1.0f, 0.0f, 0.0f);
+
+	// ========================================================
+	// 3. POWIĘKSZENIE SAMOCHODU (Skalowanie)
+	// Wartość 1.5f oznacza powiększenie o 50%. 
+	// Jeśli chcesz 2 razy większe auto, wpisz 2.0f, 2.0f, 2.0f
+	// ========================================================
+	glScalef(2.5f, 2.5f, 2.5f);
+
+	// 4. Wyśrodkowanie modelu przed wykonaniem powyższych operacji
+	glTranslatef(-1.0f, 0.0f, -0.4f);
+
+	autoGracza.draw_model_only();
+	glPopMatrix();
 	glfwSwapBuffers(window);
 }
 
@@ -174,6 +213,16 @@ int main(void)
 
 		dist += 10.0f * deltaTime; // Zwiększamy dystans o prędkość * czas
 
+		// 2. RUCH SAMOCHODU
+		// speed_x (strzałki lewo/prawo) modyfikuje pozycję X
+		autoGracza.x -= speed_x * deltaTime * 5.0f; // Mnożnik 5.0f to czułość skrętu
+
+		// speed_y (strzałki góra/dół) modyfikuje pozycję Z (przód/tył)
+		autoGracza.z += speed_y * deltaTime * 5.0f; // Mnożnik 5.0f to prędkość
+
+		// 3. Kręcenie kołami
+		// Koła kręcą się cały czas, bo miasto się przesuwa pod autem
+		autoGracza.wheelAngle += 200.0f * deltaTime;
 		// TYLKO TO wywołanie rysuje scenę
 		drawScene(window, 0, 0);
 
