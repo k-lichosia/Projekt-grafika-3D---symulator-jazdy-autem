@@ -20,6 +20,7 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_SWIZZLE
 
+#define GLEW_STATIC  // To musi być PIERWSZE
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -32,6 +33,15 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include "shaderprogram.h"
 #include "myCube.h"
 #include "myTeapot.h"
+#include "map_geometry.h"
+
+#include "city_map.h"
+
+#pragma comment(lib, "glew32s.lib")
+#pragma comment(lib, "glfw3.lib")
+#pragma comment(lib, "opengl32.lib")
+ShaderProgram* spMap; // Nowy wskaźnik na Twoje shadery
+float dist = 0.0f;    // Zmienna przejechanego dystansu
 
 float speed_x=0;
 float speed_y=0;
@@ -87,12 +97,14 @@ void windowResizeCallback(GLFWwindow* window,int width,int height) {
 //Procedura inicjująca
 void initOpenGLProgram(GLFWwindow* window) {
 	//************Tutaj umieszczaj kod, który należy wykonać raz, na początku programu************
-	glClearColor(0,0,0,1);
+	glClearColor(0.5f, 0.8f, 1.0f, 1.0f); // Jasny błękit nieba
 	glEnable(GL_DEPTH_TEST);
 	glfwSetWindowSizeCallback(window,windowResizeCallback);
 	glfwSetKeyCallback(window,keyCallback);
 
 	sp=new ShaderProgram("v_simplest.glsl",NULL,"f_simplest.glsl");
+	// Zainicjuj swoje shadery mapy
+	spMap = new ShaderProgram("v_map.glsl", NULL, "f_map.glsl");
 }
 
 
@@ -106,36 +118,21 @@ void freeOpenGLProgram(GLFWwindow* window) {
 
 
 
-//Procedura rysująca zawartość sceny
-void drawScene(GLFWwindow* window,float angle_x,float angle_y) {
-	//************Tutaj umieszczaj kod rysujący obraz******************l
+void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glm::mat4 V=glm::lookAt(
-         glm::vec3(0, 0, -5),
-         glm::vec3(0,0,0),
-         glm::vec3(0.0f,1.0f,0.0f)); //Wylicz macierz widoku
+	// Ustawienie kamery (widok zza auta)
+	glm::mat4 V = glm::lookAt(glm::vec3(0, 3, -10), glm::vec3(0, 0, 10), glm::vec3(0, 1, 0));
+	glm::mat4 P = glm::perspective(50.0f * PI / 180.0f, aspectRatio, 0.01f, 200.0f);
 
-    glm::mat4 P=glm::perspective(50.0f*PI/180.0f, aspectRatio, 0.01f, 50.0f); //Wylicz macierz rzutowania
+	spMap->use();
+	glUniformMatrix4fv(spMap->u("P"), 1, false, glm::value_ptr(P));
+	glUniformMatrix4fv(spMap->u("V"), 1, false, glm::value_ptr(V));
 
-    glm::mat4 M=glm::mat4(1.0f);
-	M=glm::rotate(M,angle_y,glm::vec3(1.0f,0.0f,0.0f)); //Wylicz macierz modelu
-	M=glm::rotate(M,angle_x,glm::vec3(0.0f,1.0f,0.0f)); //Wylicz macierz modelu
+	// WYWOŁANIE TWOJEJ MAPY
+	renderCity(spMap, dist);
 
-    sp->use();//Aktywacja programu cieniującego
-    //Przeslij parametry programu cieniującego do karty graficznej
-    glUniformMatrix4fv(sp->u("P"),1,false,glm::value_ptr(P));
-    glUniformMatrix4fv(sp->u("V"),1,false,glm::value_ptr(V));
-    glUniformMatrix4fv(sp->u("M"),1,false,glm::value_ptr(M));
-
-    glEnableVertexAttribArray(sp->a("vertex"));  //Włącz przesyłanie danych do atrybutu vertex
-    glVertexAttribPointer(sp->a("vertex"),4,GL_FLOAT,false,0,vertices); //Wskaż tablicę z danymi dla atrybutu vertex
-
-    glDrawArrays(GL_TRIANGLES,0,vertexCount); //Narysuj obiekt
-
-    glDisableVertexAttribArray(sp->a("vertex"));  //Wyłącz przesyłanie danych do atrybutu vertex
-
-    glfwSwapBuffers(window); //Przerzuć tylny bufor na przedni
+	glfwSwapBuffers(window);
 }
 
 
@@ -167,24 +164,24 @@ int main(void)
 		exit(EXIT_FAILURE);
 	}
 
-	initOpenGLProgram(window); //Operacje inicjujące
+	initOpenGLProgram(window);
 
-	//Główna pętla
-	float angle_x=0; //Aktualny kąt obrotu obiektu
-	float angle_y=0; //Aktualny kąt obrotu obiektu
-	glfwSetTime(0); //Zeruj timer
-	while (!glfwWindowShouldClose(window)) //Tak długo jak okno nie powinno zostać zamknięte
-	{
-        angle_x+=speed_x*glfwGetTime(); //Zwiększ/zmniejsz kąt obrotu na podstawie prędkości i czasu jaki upłynał od poprzedniej klatki
-        angle_y+=speed_y*glfwGetTime(); //Zwiększ/zmniejsz kąt obrotu na podstawie prędkości i czasu jaki upłynał od poprzedniej klatki
-        glfwSetTime(0); //Zeruj timer
-		drawScene(window,angle_x,angle_y); //Wykonaj procedurę rysującą
-		glfwPollEvents(); //Wykonaj procedury callback w zalezności od zdarzeń jakie zaszły.
+	glfwSetTime(0); // Zeruj timer przed pętlą
+
+	while (!glfwWindowShouldClose(window)) {
+		float deltaTime = glfwGetTime();
+		glfwSetTime(0); // Zerujemy, żeby w kolejnej klatce deltaTime było czasem trwania TEJ klatki
+
+		dist += 10.0f * deltaTime; // Zwiększamy dystans o prędkość * czas
+
+		// TYLKO TO wywołanie rysuje scenę
+		drawScene(window, 0, 0);
+
+		glfwPollEvents();
 	}
 
 	freeOpenGLProgram(window);
-
-	glfwDestroyWindow(window); //Usuń kontekst OpenGL i okno
-	glfwTerminate(); //Zwolnij zasoby zajęte przez GLFW
+	glfwDestroyWindow(window);
+	glfwTerminate();
 	exit(EXIT_SUCCESS);
 }

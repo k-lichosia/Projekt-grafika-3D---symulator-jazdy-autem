@@ -24,10 +24,19 @@
     <ClInclude Include="shaderprogram.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
-	<ClInclude Include="myCube.h">
+    <ClInclude Include="myCube.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
-	<ClInclude Include="myTeapot.h">
+    <ClInclude Include="myTeapot.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="map_geometry.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="city_map.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="..\drzewo\tree_model.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
   </ItemGroup>
@@ -46,7 +55,13 @@
     <None Include="f_simplest.glsl">
       <Filter>Pliki zasobów</Filter>
     </None>
-	<None Include="v_simplest.glsl">
+    <None Include="v_simplest.glsl">
+      <Filter>Pliki zasobów</Filter>
+    </None>
+    <None Include="v_map.glsl">
+      <Filter>Pliki zasobów</Filter>
+    </None>
+    <None Include="f_map.glsl">
       <Filter>Pliki zasobów</Filter>
     </None>
   </ItemGroup>
