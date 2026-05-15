@@ -94,17 +94,52 @@ void windowResizeCallback(GLFWwindow* window,int width,int height) {
     glViewport(0,0,width,height);
 }
 
+GLuint readTexture(const char* filename) {
+	GLuint tex;
+	glGenTextures(1, &tex);
+	glBindTexture(GL_TEXTURE_2D, tex);
+
+	// Parametry filtrowania
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	std::vector<unsigned char> image;
+	unsigned width, height;
+
+	// Użycie biblioteki lodepng do wczytania pliku
+	unsigned error = lodepng::decode(image, width, height, filename);
+
+	if (error) {
+		printf("Blad wczytywania tekstury %s: %s\n", filename, lodepng_error_text(error));
+		return 0;
+	}
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, &image[0]);
+	return tex;
+}
+
 //Procedura inicjująca
 void initOpenGLProgram(GLFWwindow* window) {
-	//************Tutaj umieszczaj kod, który należy wykonać raz, na początku programu************
-	glClearColor(0.5f, 0.8f, 1.0f, 1.0f); // Jasny błękit nieba
+	glClearColor(0.15f, 0.25f, 0.45f, 1.0f);
 	glEnable(GL_DEPTH_TEST);
-	glfwSetWindowSizeCallback(window,windowResizeCallback);
-	glfwSetKeyCallback(window,keyCallback);
+	glfwSetWindowSizeCallback(window, windowResizeCallback);
+	glfwSetKeyCallback(window, keyCallback);
 
-	sp=new ShaderProgram("v_simplest.glsl",NULL,"f_simplest.glsl");
-	// Zainicjuj swoje shadery mapy
+	sp = new ShaderProgram("v_simplest.glsl", NULL, "f_simplest.glsl");
 	spMap = new ShaderProgram("v_map.glsl", NULL, "f_map.glsl");
+
+	// POPRAWKA: Usuwamy "GLuint" z początku linii poniżej
+	texChodnik = readTexture("chodnik2.png");
+
+	if (texChodnik == 0) {
+		printf("UWAGA: Tekstura nie zostala wczytana! Sprawdz plik chodnik.png\n");
+	}
+
+	glBindTexture(GL_TEXTURE_2D, texChodnik);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 }
 
 

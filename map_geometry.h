@@ -1,14 +1,14 @@
 #ifndef MAP_GEOMETRY_H
 #define MAP_GEOMETRY_H
 
-// --- DROGA (Asfalt: ciemny szary) ---
+// --- DROGA (Skorygowana szerokoœæ: 6.0) ---
 float roadVertices[] = {
-    -5.0f, 0.0f, 0.0f, 1.0f,  5.0f, 0.0f, 0.0f, 1.0f,  5.0f, 0.0f, 100.0f, 1.0f,
-    -5.0f, 0.0f, 0.0f, 1.0f,  5.0f, 0.0f, 100.0f, 1.0f, -5.0f, 0.0f, 100.0f, 1.0f
+    -6.0f, 0.0f, 0.0f, 1.0f,   6.0f, 0.0f, 0.0f, 1.0f,   6.0f, 0.0f, 100.0f, 1.0f,
+    -6.0f, 0.0f, 0.0f, 1.0f,   6.0f, 0.0f, 100.0f, 1.0f, -6.0f, 0.0f, 100.0f, 1.0f
 };
 float roadColors[] = {
-    0.22f, 0.22f, 0.23f, 1.0f, 0.22f, 0.22f, 0.23f, 1.0f, 0.22f, 0.22f, 0.23f, 1.0f,
-    0.22f, 0.22f, 0.23f, 1.0f, 0.22f, 0.22f, 0.23f, 1.0f, 0.22f, 0.22f, 0.23f, 1.0f
+    0.25f, 0.25f, 0.27f, 1.0f, 0.25f, 0.25f, 0.27f, 1.0f, 0.25f, 0.25f, 0.27f, 1.0f,
+    0.25f, 0.25f, 0.27f, 1.0f, 0.25f, 0.25f, 0.27f, 1.0f, 0.25f, 0.25f, 0.27f, 1.0f
 };
 
 // --- PASY NA ŒRODKU (Brudna biel) ---
@@ -17,14 +17,31 @@ float stripeVertices[] = {
     -0.15f, 0.01f, 0.0f, 1.0f,  0.15f, 0.01f, 2.5f, 1.0f, -0.15f, 0.01f, 2.5f, 1.0f
 };
 
-// --- CHODNIK (Brukowa szaroœæ) ---
-float curbVertices[] = {
-    -3.0f, 0.005f, 0.0f, 1.0f,  3.0f, 0.005f, 0.0f, 1.0f,  3.0f, 0.005f, 100.0f, 1.0f,
-    -3.0f, 0.005f, 0.0f, 1.0f,  3.0f, 0.005f, 100.0f, 1.0f, -3.0f, 0.005f, 100.0f, 1.0f
+float sidewalkVertices[] = {
+    0.0f, 0.01f, 0.0f, 1.0f,   0.0f, 0.0f,
+    1.0f, 0.01f, 0.0f, 1.0f,   1.0f, 0.0f,
+    1.0f, 0.01f, 100.0f, 1.0f,  1.0f, 25.0f, // 25.0f oznacza, ¿e zdjêcie powtórzy siê 25 razy na 100 metrach
+
+    0.0f, 0.01f, 0.0f, 1.0f,   0.0f, 0.0f,
+    1.0f, 0.01f, 100.0f, 1.0f,  1.0f, 25.0f,
+    0.0f, 0.01f, 100.0f, 1.0f,  0.0f, 25.0f
 };
-float curbColors[] = {
-    0.45f, 0.45f, 0.47f, 1.0f, 0.45f, 0.45f, 0.47f, 1.0f, 0.45f, 0.45f, 0.47f, 1.0f,
-    0.45f, 0.45f, 0.47f, 1.0f, 0.45f, 0.45f, 0.47f, 1.0f, 0.45f, 0.45f, 0.47f, 1.0f
+
+// --- B. ZAPLECZE / FUNDAMENT (Pod budynki - szerokoœæ 1.0) ---
+float foundationVertices[] = {
+    0.0f, 0.005f, 0.0f, 1.0f,  1.0f, 0.005f, 0.0f, 1.0f,  1.0f, 0.005f, 100.0f, 1.0f,
+    0.0f, 0.005f, 0.0f, 1.0f,  1.0f, 0.005f, 100.0f, 1.0f, 0.0f, 0.005f, 100.0f, 1.0f
+};
+
+float sidewalkColors[] = {
+    0.35f, 0.35f, 0.37f, 1.0f, 0.35f, 0.35f, 0.37f, 1.0f, 0.35f, 0.35f, 0.37f, 1.0f,
+    0.35f, 0.35f, 0.37f, 1.0f, 0.35f, 0.35f, 0.37f, 1.0f, 0.35f, 0.35f, 0.37f, 1.0f
+};
+
+// 2. Zaplecze (pod budynkami i dalej) - zróbmy go ciemniejszym/innym, by odci¹æ kostkê
+float foundationColors[] = {
+    0.20f, 0.20f, 0.22f, 1.0f, 0.20f, 0.20f, 0.22f, 1.0f, 0.20f, 0.20f, 0.22f, 1.0f,
+    0.20f, 0.20f, 0.22f, 1.0f, 0.20f, 0.20f, 0.22f, 1.0f, 0.20f, 0.20f, 0.22f, 1.0f
 };
 
 // --- BUDYNEK (30 wierzcho³ków z cieniowaniem œcian) ---
@@ -40,6 +57,22 @@ float buildingVertices[] = {
      2, 0, 4, 1,  2, 8, 4, 1,  2, 8, 0, 1,   // (Dokoñczenie prawego boku)
      // Dach
      -2, 8, 0, 1,  2, 8, 0, 1,  2, 8, 4, 1,  -2, 8, 0, 1,  2, 8, 4, 1, -2, 8, 4, 1
+};
+
+float unitCube[] = {
+    // Wspó³rzêdne (x, y, z, w) - 36 wierzcho³ków (6 œcian * 2 trójk¹ty * 3 punkty)
+    -0.5f,-0.5f,-0.5f,1.0f,  0.5f,-0.5f,-0.5f,1.0f,  0.5f, 0.5f,-0.5f,1.0f,
+    -0.5f,-0.5f,-0.5f,1.0f,  0.5f, 0.5f,-0.5f,1.0f, -0.5f, 0.5f,-0.5f,1.0f,
+    -0.5f,-0.5f, 0.5f,1.0f,  0.5f,-0.5f, 0.5f,1.0f,  0.5f, 0.5f, 0.5f,1.0f,
+    -0.5f,-0.5f, 0.5f,1.0f,  0.5f, 0.5f, 0.5f,1.0f, -0.5f, 0.5f, 0.5f,1.0f,
+    -0.5f, 0.5f, 0.5f,1.0f, -0.5f, 0.5f,-0.5f,1.0f, -0.5f,-0.5f,-0.5f,1.0f,
+    -0.5f, 0.5f, 0.5f,1.0f, -0.5f,-0.5f,-0.5f,1.0f, -0.5f,-0.5f, 0.5f,1.0f,
+     0.5f, 0.5f, 0.5f,1.0f,  0.5f, 0.5f,-0.5f,1.0f,  0.5f,-0.5f,-0.5f,1.0f,
+     0.5f, 0.5f, 0.5f,1.0f,  0.5f,-0.5f,-0.5f,1.0f,  0.5f,-0.5f, 0.5f,1.0f,
+    -0.5f,-0.5f,-0.5f,1.0f,  0.5f,-0.5f,-0.5f,1.0f,  0.5f,-0.5f, 0.5f,1.0f,
+    -0.5f,-0.5f,-0.5f,1.0f,  0.5f,-0.5f, 0.5f,1.0f, -0.5f,-0.5f, 0.5f,1.0f,
+    -0.5f, 0.5f,-0.5f,1.0f,  0.5f, 0.5f,-0.5f,1.0f,  0.5f, 0.5f, 0.5f,1.0f,
+    -0.5f, 0.5f,-0.5f,1.0f,  0.5f, 0.5f, 0.5f,1.0f, -0.5f, 0.5f, 0.5f,1.0f
 };
 
 // Kolory budynku - ka¿da œciana ma inny odcieñ, ¿eby udawaæ œwiat³o
