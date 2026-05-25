@@ -37,6 +37,8 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 
 #include "city_map.h"
 #include "Car.h"
+#include "samochodyOBJ.h"
+
 
 #pragma comment(lib, "glew32s.lib")
 #pragma comment(lib, "glfw3.lib")
@@ -51,6 +53,10 @@ float aspectRatio=1;
 ShaderProgram *sp;
 
 Car autoGracza(0.0f, 0.5f, -2.0f);
+std::vector<Car> inneAuta;         // To dodaliśmy w poprzednim kroku
+float spawnTimer = 0.0f;
+
+ObjModel modelSamochodu;
 //Odkomentuj, żeby rysować kostkę
 float* vertices = myCubeVertices;
 float* normals = myCubeNormals;
@@ -94,17 +100,43 @@ void windowResizeCallback(GLFWwindow* window,int width,int height) {
     glViewport(0,0,width,height);
 }
 
+// Funkcja ładująca obrazek PNG do pamięci karty graficznej
+
+
 //Procedura inicjująca
 void initOpenGLProgram(GLFWwindow* window) {
-	//************Tutaj umieszczaj kod, który należy wykonać raz, na początku programu************
-	glClearColor(0.5f, 0.8f, 1.0f, 1.0f); // Jasny błękit nieba
-	glEnable(GL_DEPTH_TEST);
-	glfwSetWindowSizeCallback(window,windowResizeCallback);
-	glfwSetKeyCallback(window,keyCallback);
+	glClearColor(0.5f, 0.8f, 1.0f, 1.0f); //
+	glEnable(GL_DEPTH_TEST); //
+	glfwSetWindowSizeCallback(window, windowResizeCallback); //
+	glfwSetKeyCallback(window, keyCallback); //
 
-	sp=new ShaderProgram("v_simplest.glsl",NULL,"f_simplest.glsl");
-	// Zainicjuj swoje shadery mapy
-	spMap = new ShaderProgram("v_map.glsl", NULL, "f_map.glsl");
+	sp = new ShaderProgram("v_simplest.glsl", NULL, "f_simplest.glsl"); //
+	spMap = new ShaderProgram("v_map.glsl", NULL, "f_map.glsl"); //
+
+	if (!modelSamochodu.load("Car.obj")) { //
+		// Obsługa błędu
+	}
+
+	// ==========================================
+	// KONFIGURACJA ŚWIATŁA SŁONECZNEGO (GL_LIGHT0)
+	// ==========================================
+	// Pozycja: {X, Y, Z, W}. W = 0.0f oznacza, że to światło kierunkowe (nieskończenie daleko jak słońce)
+	GLfloat light_position[] = { 10.0f, 20.0f, 10.0f, 0.0f };
+
+	GLfloat light_ambient[] = { 0.3f, 0.3f, 0.3f, 1.0f }; // Delikatne wypełnienie cieni
+	GLfloat light_diffuse[] = { 0.8f, 0.8f, 0.8f, 1.0f }; // Główne światło uderzające w bryłę
+	GLfloat light_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f }; // Białe, ostre odblaski słońca
+
+	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+	glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
+
+	glShadeModel(GL_SMOOTH); // Gwarantuje płynne cieniowanie między trójkątami
+
+
+	// --> TUTAJ ładujemy teksturę do pamięci! <--
+	// Upewnij się, że nazwa pliku jest prawidłowa
 }
 
 
@@ -131,7 +163,7 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	glUniformMatrix4fv(spMap->u("V"), 1, false, glm::value_ptr(V));
 	renderCity(spMap, dist);
 
-	// 2. RYSOWANIE SAMOCHODU
+	// 2. RYSOWANIE SAMOCHODU GRACZA
 	glUseProgram(0);
 
 	glMatrixMode(GL_PROJECTION);
@@ -140,37 +172,92 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadMatrixf(glm::value_ptr(V));
 
+	// ---> DODAJ TE DWIE LINIJKI TUTAJ <---
+	// Odświeżamy pozycję słońca dopiero, gdy kamera już patrzy na scenę
+	GLfloat light_position[] = { 10.0f, 20.0f, 10.0f, 0.0f };
+	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
 	glPushMatrix();
-	// 1. Przesunięcie do pozycji auta na drodze
 	glTranslatef(autoGracza.x, autoGracza.y, autoGracza.z);
 
-	// ========================================================
-	// 2. SKRĘCANIE I PRZECHYLANIE (Efekt "ukosu")
-	// Mnożnik określa jak mocno auto reaguje. 
-	// Wartość speed_x przy wciśnięciu to około 1.5 lub -1.5
-	// ========================================================
-
-	// Skręt "nosa" samochodu w lewo/prawo (Yaw)
 	float katSkretu = speed_x * 15.0f;
 	glRotatef(90.0f - katSkretu, 0.0f, 1.0f, 0.0f);
 
-	// Opcjonalny przechył karoserii na boki (Body Roll)
-	// Jeśli auto przechyla się w złą stronę, usuń znak minusa!
-	//float przechyl = -speed_x * 5.0f;
-	//glRotatef(przechyl, 1.0f, 0.0f, 0.0f);
-
-	// ========================================================
-	// 3. POWIĘKSZENIE SAMOCHODU (Skalowanie)
-	// Wartość 1.5f oznacza powiększenie o 50%. 
-	// Jeśli chcesz 2 razy większe auto, wpisz 2.0f, 2.0f, 2.0f
-	// ========================================================
+	// Skala i przesunięcie TYLKO dla Twojego autorskiego modelu:
 	glScalef(2.5f, 2.5f, 2.5f);
-
-	// 4. Wyśrodkowanie modelu przed wykonaniem powyższych operacji
 	glTranslatef(-1.0f, 0.0f, -0.4f);
 
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+	glEnable(GL_COLOR_MATERIAL);
+	glEnable(GL_NORMALIZE); // Chroni Twoje auto przed błędem światła po użyciu glScalef
+
+	// Kolor Twojego auta (np. niebieski)
+	glColor3f(0.2f, 0.4f, 1.0f);
+
+	// Parametry odblasku lakieru
+	GLfloat mat_specular[] = { 0.8f, 0.8f, 0.8f, 1.0f };
+	GLfloat mat_shininess[] = { 50.0f };
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+
+	// WYWOŁANIE TWOJEJ AUTORSKIEJ FUNKCJI:
 	autoGracza.draw_model_only();
+
+	glDisable(GL_NORMALIZE);
+	glDisable(GL_LIGHTING);
 	glPopMatrix();
+
+	// 3. RYSOWANIE AUT NPC
+	for (size_t i = 0; i < inneAuta.size(); i++) {
+		glPushMatrix();
+
+		// KROK 3. RYSOWANIE AUT NPC
+		// ...
+		glTranslatef(inneAuta[i].x, inneAuta[i].y, inneAuta[i].z);
+
+		// OBRÓT ZALEŻNY OD PASA RUCHU:
+		if (inneAuta[i].x < 0.0f) {
+			// Lewy pas - jadą w naszą stronę, widzimy maskę
+			glRotatef(180.0f, 0.0f, 1.0f, 0.0f);
+		}
+		else {
+			// Prawy pas - wyprzedzają nas, widzimy ich tył
+			glRotatef(0.0f, 0.0f, 1.0f, 0.0f);
+		}
+
+		glScalef(1.0f, 1.0f, 1.0f);
+		glTranslatef(-1.0f, 0.0f, -0.4f);
+		// ... (reszta, czyli włączenie światła i rysowanie)
+
+		// ZMIANA KĄTA! Jeśli nadal będą bokiem, zmień 180.0f na 0.0f lub 270.0f
+		glRotatef(180.0f, 0.0f, 1.0f, 0.0f);
+
+		glScalef(1.0f, 1.0f, 1.0f); //
+		glTranslatef(-1.0f, 0.0f, -0.4f); //
+
+		glEnable(GL_LIGHTING);
+		glEnable(GL_LIGHT0);
+		glEnable(GL_COLOR_MATERIAL);
+		glEnable(GL_NORMALIZE);
+
+		// ==========================================
+		// EFEKT BŁYSZCZĄCEGO LAKIERU (Materiały)
+		// ==========================================
+		GLfloat mat_specular[] = { 0.8f, 0.8f, 0.8f, 1.0f }; // Kolor odblasku (jasnoszary)
+		GLfloat mat_shininess[] = { 50.0f };                 // Siła połysku (wartości od 0 do 128)
+
+		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+
+		// Kolor z pliku .mtl ładuje się teraz sam wewnątrz tej funkcji!
+		modelSamochodu.draw();
+
+		glDisable(GL_NORMALIZE);
+		glDisable(GL_LIGHTING); 
+
+		glPopMatrix(); //
+	}
 	glfwSwapBuffers(window);
 }
 
@@ -209,20 +296,61 @@ int main(void)
 
 	while (!glfwWindowShouldClose(window)) {
 		float deltaTime = glfwGetTime();
-		glfwSetTime(0); // Zerujemy, żeby w kolejnej klatce deltaTime było czasem trwania TEJ klatki
+		glfwSetTime(0);
 
-		dist += 10.0f * deltaTime; // Zwiększamy dystans o prędkość * czas
+		dist += 10.0f * deltaTime;
 
-		// 2. RUCH SAMOCHODU
-		// speed_x (strzałki lewo/prawo) modyfikuje pozycję X
-		autoGracza.x -= speed_x * deltaTime * 5.0f; // Mnożnik 5.0f to czułość skrętu
-
-		// speed_y (strzałki góra/dół) modyfikuje pozycję Z (przód/tył)
-		autoGracza.z += speed_y * deltaTime * 5.0f; // Mnożnik 5.0f to prędkość
-
-		// 3. Kręcenie kołami
-		// Koła kręcą się cały czas, bo miasto się przesuwa pod autem
+		// Ruch gracza
+		autoGracza.x -= speed_x * deltaTime * 5.0f;
+		autoGracza.z += speed_y * deltaTime * 5.0f;
 		autoGracza.wheelAngle += 200.0f * deltaTime;
+
+		// 1. Odliczanie czasu i pojawianie się nowych aut
+		// 1. Odliczanie czasu i pojawianie się nowych aut
+		spawnTimer += deltaTime;
+		if (spawnTimer > 3.5f) {
+			float laneX = (rand() % 2 == 0) ? -3.0f : 3.0f;
+
+			// ZMIANA: Teraz sprawdzamy, czy to prawy pas (> 0.0f)
+			if (laneX > 0.0f) {
+				// PRAWY PAS: Auto z naprzeciwka pojawia się daleko z przodu
+				inneAuta.push_back(Car(laneX, 0.5f, 40.0f));
+			}
+			else {
+				// LEWY PAS: Auto z naszego kierunku pojawia się za kamerą (wyprzedza nas)
+				inneAuta.push_back(Car(laneX, 0.5f, -10.0f));
+			}
+			spawnTimer = 0.0f;
+		}
+
+		// 2. Aktualizacja pozycji aut i ich usuwanie
+		for (int i = 0; i < inneAuta.size(); i++) {
+
+			// ZMIANA: Teraz prawy pas jedzie w Twoją stronę
+			if (inneAuta[i].x > 0.0f) {
+				// PRAWY PAS (Z naprzeciwka) - Zmniejszamy Z (jadą w naszą stronę)
+				inneAuta[i].z -= 25.0f * deltaTime;
+				inneAuta[i].wheelAngle -= 200.0f * deltaTime;
+
+				// Znikają, gdy przejadą za naszą kamerę
+				if (inneAuta[i].z < -10.0f) {
+					inneAuta.erase(inneAuta.begin() + i);
+					i--;
+				}
+			}
+			else {
+				// LEWY PAS (Wyprzedzający) - Zwiększamy Z (oddalają się od nas w przód)
+				inneAuta[i].z += 15.0f * deltaTime;
+				inneAuta[i].wheelAngle += 200.0f * deltaTime;
+
+				// Znikają, gdy uciekną nam za daleko na horyzont
+				if (inneAuta[i].z > 40.0f) {
+					inneAuta.erase(inneAuta.begin() + i);
+					i--;
+				}
+			}
+		}
+
 		// TYLKO TO wywołanie rysuje scenę
 		drawScene(window, 0, 0);
 
