@@ -28,6 +28,7 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include <glm/gtc/matrix_transform.hpp>
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 #include "constants.h"
 #include "lodepng.h"
 #include "shaderprogram.h"
@@ -209,32 +210,17 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	glPopMatrix();
 
 	// 3. RYSOWANIE AUT NPC
+	// 3. RYSOWANIE AUT NPC
 	for (size_t i = 0; i < inneAuta.size(); i++) {
 		glPushMatrix();
 
-		// KROK 3. RYSOWANIE AUT NPC
-		// ...
 		glTranslatef(inneAuta[i].x, inneAuta[i].y, inneAuta[i].z);
 
-		// OBRÓT ZALEŻNY OD PASA RUCHU:
-		if (inneAuta[i].x < 0.0f) {
-			// Lewy pas - jadą w naszą stronę, widzimy maskę
-			glRotatef(180.0f, 0.0f, 1.0f, 0.0f);
-		}
-		else {
-			// Prawy pas - wyprzedzają nas, widzimy ich tył
-			glRotatef(0.0f, 0.0f, 1.0f, 0.0f);
-		}
+		// Wszystkie auta są skierowane przodem do gracza
+		glRotatef(180.0f, 0.0f, 1.0f, 0.0f);
 
 		glScalef(1.0f, 1.0f, 1.0f);
 		glTranslatef(-1.0f, 0.0f, -0.4f);
-		// ... (reszta, czyli włączenie światła i rysowanie)
-
-		// ZMIANA KĄTA! Jeśli nadal będą bokiem, zmień 180.0f na 0.0f lub 270.0f
-		glRotatef(180.0f, 0.0f, 1.0f, 0.0f);
-
-		glScalef(1.0f, 1.0f, 1.0f); //
-		glTranslatef(-1.0f, 0.0f, -0.4f); //
 
 		glEnable(GL_LIGHTING);
 		glEnable(GL_LIGHT0);
@@ -244,19 +230,19 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 		// ==========================================
 		// EFEKT BŁYSZCZĄCEGO LAKIERU (Materiały)
 		// ==========================================
-		GLfloat mat_specular[] = { 0.8f, 0.8f, 0.8f, 1.0f }; // Kolor odblasku (jasnoszary)
-		GLfloat mat_shininess[] = { 50.0f };                 // Siła połysku (wartości od 0 do 128)
+		GLfloat mat_specular[] = { 0.8f, 0.8f, 0.8f, 1.0f };
+		GLfloat mat_shininess[] = { 50.0f };
 
 		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
 		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
 
-		// Kolor z pliku .mtl ładuje się teraz sam wewnątrz tej funkcji!
+		// Rysujemy model
 		modelSamochodu.draw();
 
 		glDisable(GL_NORMALIZE);
-		glDisable(GL_LIGHTING); 
+		glDisable(GL_LIGHTING);
 
-		glPopMatrix(); //
+		glPopMatrix();
 	}
 	glfwSwapBuffers(window);
 }
@@ -264,6 +250,7 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 
 int main(void)
 {
+	srand(time(NULL));
 	GLFWwindow* window; //Wskaźnik na obiekt reprezentujący okno
 
 	glfwSetErrorCallback(error_callback);//Zarejestruj procedurę obsługi błędów
@@ -306,48 +293,34 @@ int main(void)
 		autoGracza.wheelAngle += 200.0f * deltaTime;
 
 		// 1. Odliczanie czasu i pojawianie się nowych aut
-		// 1. Odliczanie czasu i pojawianie się nowych aut
 		spawnTimer += deltaTime;
 		if (spawnTimer > 3.5f) {
-			float laneX = (rand() % 2 == 0) ? -3.0f : 3.0f;
 
-			// ZMIANA: Teraz sprawdzamy, czy to prawy pas (> 0.0f)
-			if (laneX > 0.0f) {
-				// PRAWY PAS: Auto z naprzeciwka pojawia się daleko z przodu
-				inneAuta.push_back(Car(laneX, 0.5f, 40.0f));
-			}
-			else {
-				// LEWY PAS: Auto z naszego kierunku pojawia się za kamerą (wyprzedza nas)
-				inneAuta.push_back(Car(laneX, 0.5f, -10.0f));
-			}
+			// TUTAJ MOŻESZ DOWOLNIE PRZESUWAĆ PASY:
+			// Wartość 0.0 to idealny środek drogi (tam, gdzie stoisz Ty).
+			// Im bliżej zera, tym bardziej auta zjeżdżają do środka.
+			float lewyPas = -3.0f;  // Zmień np. na -2.7f, żeby przesunąć lewy w prawo
+			float prawyPas = 1.7f;  // Zmień np. na  2.7f, żeby przesunąć prawy w lewo
+
+			// Komputer losuje jeden z powyższych pasów
+			float laneX = (rand() % 100 < 50) ? lewyPas : prawyPas;
+
+			// Auta pojawiają się daleko na mapie (Z = 40.0f)
+			inneAuta.push_back(Car(laneX, 0.5f, 40.0f));
 			spawnTimer = 0.0f;
 		}
 
 		// 2. Aktualizacja pozycji aut i ich usuwanie
 		for (int i = 0; i < inneAuta.size(); i++) {
 
-			// ZMIANA: Teraz prawy pas jedzie w Twoją stronę
-			if (inneAuta[i].x > 0.0f) {
-				// PRAWY PAS (Z naprzeciwka) - Zmniejszamy Z (jadą w naszą stronę)
-				inneAuta[i].z -= 25.0f * deltaTime;
-				inneAuta[i].wheelAngle -= 200.0f * deltaTime;
+			// WSZYSTKIE auta jadą z naprzeciwka w naszą stronę
+			inneAuta[i].z -= 25.0f * deltaTime;
+			inneAuta[i].wheelAngle -= 200.0f * deltaTime;
 
-				// Znikają, gdy przejadą za naszą kamerę
-				if (inneAuta[i].z < -10.0f) {
-					inneAuta.erase(inneAuta.begin() + i);
-					i--;
-				}
-			}
-			else {
-				// LEWY PAS (Wyprzedzający) - Zwiększamy Z (oddalają się od nas w przód)
-				inneAuta[i].z += 15.0f * deltaTime;
-				inneAuta[i].wheelAngle += 200.0f * deltaTime;
-
-				// Znikają, gdy uciekną nam za daleko na horyzont
-				if (inneAuta[i].z > 40.0f) {
-					inneAuta.erase(inneAuta.begin() + i);
-					i--;
-				}
+			// Znikają, gdy przejadą za naszą kamerę (Z < -10.0f)
+			if (inneAuta[i].z < -10.0f) {
+				inneAuta.erase(inneAuta.begin() + i);
+				i--;
 			}
 		}
 
