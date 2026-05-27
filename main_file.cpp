@@ -28,6 +28,7 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include <glm/gtc/matrix_transform.hpp>
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 #include "constants.h"
 #include "lodepng.h"
 #include "shaderprogram.h"
@@ -36,6 +37,9 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include "map_geometry.h"
 
 #include "city_map.h"
+#include "Car.h"
+#include "samochodyOBJ.h"
+
 
 #pragma comment(lib, "glew32s.lib")
 #pragma comment(lib, "glfw3.lib")
@@ -49,14 +53,17 @@ float aspectRatio=1;
 
 ShaderProgram *sp;
 
+Car autoGracza(0.0f, 0.5f, -2.0f);
+std::vector<Car> inneAuta;         // To dodaliśmy w poprzednim kroku
+float spawnTimer = 0.0f;
 
+ObjModel modelSamochodu;
 //Odkomentuj, żeby rysować kostkę
 float* vertices = myCubeVertices;
 float* normals = myCubeNormals;
 float* texCoords = myCubeTexCoords;
 float* colors = myCubeColors;
 int vertexCount = myCubeVertexCount;
-
 
 //Odkomentuj, żeby rysować czajnik
 //float* vertices = myTeapotVertices;
@@ -122,10 +129,35 @@ GLuint readTexture(const char* filename) {
 
 //Procedura inicjująca
 void initOpenGLProgram(GLFWwindow* window) {
-	glClearColor(0.15f, 0.25f, 0.45f, 1.0f);
-	glEnable(GL_DEPTH_TEST);
-	glfwSetWindowSizeCallback(window, windowResizeCallback);
-	glfwSetKeyCallback(window, keyCallback);
+	glClearColor(0.15f, 0.25f, 0.45f, 1.0f); //
+	glEnable(GL_DEPTH_TEST); //
+	glfwSetWindowSizeCallback(window, windowResizeCallback); //
+	glfwSetKeyCallback(window, keyCallback); //
+
+	sp = new ShaderProgram("v_simplest.glsl", NULL, "f_simplest.glsl"); //
+	spMap = new ShaderProgram("v_map.glsl", NULL, "f_map.glsl"); //
+
+	if (!modelSamochodu.load("Car.obj")) { //
+		// Obsługa błędu
+	}
+
+	// ==========================================
+	// KONFIGURACJA ŚWIATŁA SŁONECZNEGO (GL_LIGHT0)
+	// ==========================================
+	// Pozycja: {X, Y, Z, W}. W = 0.0f oznacza, że to światło kierunkowe (nieskończenie daleko jak słońce)
+	GLfloat light_position[] = { 10.0f, 20.0f, 10.0f, 0.0f };
+
+	GLfloat light_ambient[] = { 0.3f, 0.3f, 0.3f, 1.0f }; // Delikatne wypełnienie cieni
+	GLfloat light_diffuse[] = { 0.8f, 0.8f, 0.8f, 1.0f }; // Główne światło uderzające w bryłę
+	GLfloat light_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f }; // Białe, ostre odblaski słońca
+
+	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+	glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
+
+	glShadeModel(GL_SMOOTH); // Gwarantuje płynne cieniowanie między trójkątami
+
 
 	sp = new ShaderProgram("v_simplest.glsl", NULL, "f_simplest.glsl");
 	spMap = new ShaderProgram("v_map.glsl", NULL, "f_map.glsl");
@@ -156,23 +188,103 @@ void freeOpenGLProgram(GLFWwindow* window) {
 void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// Ustawienie kamery (widok zza auta)
+	// Kamera patrzy z (0, 3, -10) na (0, 0, 10)
 	glm::mat4 V = glm::lookAt(glm::vec3(0, 3, -10), glm::vec3(0, 0, 10), glm::vec3(0, 1, 0));
 	glm::mat4 P = glm::perspective(50.0f * PI / 180.0f, aspectRatio, 0.01f, 200.0f);
 
+	// 1. RYSOWANIE MAPY
 	spMap->use();
 	glUniformMatrix4fv(spMap->u("P"), 1, false, glm::value_ptr(P));
 	glUniformMatrix4fv(spMap->u("V"), 1, false, glm::value_ptr(V));
-
-	// WYWOŁANIE TWOJEJ MAPY
 	renderCity(spMap, dist);
 
+	// 2. RYSOWANIE SAMOCHODU GRACZA
+	glUseProgram(0);
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadMatrixf(glm::value_ptr(P));
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadMatrixf(glm::value_ptr(V));
+
+	// ---> DODAJ TE DWIE LINIJKI TUTAJ <---
+	// Odświeżamy pozycję słońca dopiero, gdy kamera już patrzy na scenę
+	GLfloat light_position[] = { 10.0f, 20.0f, 10.0f, 0.0f };
+	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
+	glPushMatrix();
+	glTranslatef(autoGracza.x, autoGracza.y, autoGracza.z);
+
+	float katSkretu = speed_x * 15.0f;
+	glRotatef(90.0f - katSkretu, 0.0f, 1.0f, 0.0f);
+
+	// Skala i przesunięcie TYLKO dla Twojego autorskiego modelu:
+	glScalef(2.5f, 2.5f, 2.5f);
+	glTranslatef(-1.0f, 0.0f, -0.4f);
+
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+	glEnable(GL_COLOR_MATERIAL);
+	glEnable(GL_NORMALIZE); // Chroni Twoje auto przed błędem światła po użyciu glScalef
+
+	// Kolor Twojego auta (np. niebieski)
+	glColor3f(0.2f, 0.4f, 1.0f);
+
+	// Parametry odblasku lakieru
+	GLfloat mat_specular[] = { 0.8f, 0.8f, 0.8f, 1.0f };
+	GLfloat mat_shininess[] = { 50.0f };
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+
+	// WYWOŁANIE TWOJEJ AUTORSKIEJ FUNKCJI:
+	autoGracza.draw_model_only();
+
+	glDisable(GL_NORMALIZE);
+	glDisable(GL_LIGHTING);
+	glPopMatrix();
+
+	// 3. RYSOWANIE AUT NPC
+	// 3. RYSOWANIE AUT NPC
+	for (size_t i = 0; i < inneAuta.size(); i++) {
+		glPushMatrix();
+
+		glTranslatef(inneAuta[i].x, inneAuta[i].y, inneAuta[i].z);
+
+		// Wszystkie auta są skierowane przodem do gracza
+		glRotatef(180.0f, 0.0f, 1.0f, 0.0f);
+
+		glScalef(1.0f, 1.0f, 1.0f);
+		glTranslatef(-1.0f, 0.0f, -0.4f);
+
+		glEnable(GL_LIGHTING);
+		glEnable(GL_LIGHT0);
+		glEnable(GL_COLOR_MATERIAL);
+		glEnable(GL_NORMALIZE);
+
+		// ==========================================
+		// EFEKT BŁYSZCZĄCEGO LAKIERU (Materiały)
+		// ==========================================
+		GLfloat mat_specular[] = { 0.8f, 0.8f, 0.8f, 1.0f };
+		GLfloat mat_shininess[] = { 50.0f };
+
+		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+
+		// Rysujemy model
+		modelSamochodu.draw();
+
+		glDisable(GL_NORMALIZE);
+		glDisable(GL_LIGHTING);
+
+		glPopMatrix();
+	}
 	glfwSwapBuffers(window);
 }
 
 
 int main(void)
 {
+	srand(time(NULL));
 	GLFWwindow* window; //Wskaźnik na obiekt reprezentujący okno
 
 	glfwSetErrorCallback(error_callback);//Zarejestruj procedurę obsługi błędów
@@ -205,9 +317,46 @@ int main(void)
 
 	while (!glfwWindowShouldClose(window)) {
 		float deltaTime = glfwGetTime();
-		glfwSetTime(0); // Zerujemy, żeby w kolejnej klatce deltaTime było czasem trwania TEJ klatki
+		glfwSetTime(0);
 
-		dist += 10.0f * deltaTime; // Zwiększamy dystans o prędkość * czas
+		dist += 10.0f * deltaTime;
+
+		// Ruch gracza
+		autoGracza.x -= speed_x * deltaTime * 5.0f;
+		autoGracza.z += speed_y * deltaTime * 5.0f;
+		autoGracza.wheelAngle += 200.0f * deltaTime;
+
+		// 1. Odliczanie czasu i pojawianie się nowych aut
+		spawnTimer += deltaTime;
+		if (spawnTimer > 3.5f) {
+
+			// TUTAJ MOŻESZ DOWOLNIE PRZESUWAĆ PASY:
+			// Wartość 0.0 to idealny środek drogi (tam, gdzie stoisz Ty).
+			// Im bliżej zera, tym bardziej auta zjeżdżają do środka.
+			float lewyPas = -3.0f;  // Zmień np. na -2.7f, żeby przesunąć lewy w prawo
+			float prawyPas = 1.7f;  // Zmień np. na  2.7f, żeby przesunąć prawy w lewo
+
+			// Komputer losuje jeden z powyższych pasów
+			float laneX = (rand() % 100 < 50) ? lewyPas : prawyPas;
+
+			// Auta pojawiają się daleko na mapie (Z = 40.0f)
+			inneAuta.push_back(Car(laneX, 0.5f, 40.0f));
+			spawnTimer = 0.0f;
+		}
+
+		// 2. Aktualizacja pozycji aut i ich usuwanie
+		for (int i = 0; i < inneAuta.size(); i++) {
+
+			// WSZYSTKIE auta jadą z naprzeciwka w naszą stronę
+			inneAuta[i].z -= 25.0f * deltaTime;
+			inneAuta[i].wheelAngle -= 200.0f * deltaTime;
+
+			// Znikają, gdy przejadą za naszą kamerę (Z < -10.0f)
+			if (inneAuta[i].z < -10.0f) {
+				inneAuta.erase(inneAuta.begin() + i);
+				i--;
+			}
+		}
 
 		// TYLKO TO wywołanie rysuje scenę
 		drawScene(window, 0, 0);
