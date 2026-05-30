@@ -75,5 +75,8 @@
     <Image Include="asfalt.png">
       <Filter>Pliki zasobów</Filter>
     </Image>
+    <Image Include="kamienica.png">
+      <Filter>Pliki zasobów</Filter>
+    </Image>
   </ItemGroup>
 </Project>

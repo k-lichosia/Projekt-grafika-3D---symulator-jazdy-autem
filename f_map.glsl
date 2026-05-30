@@ -2,7 +2,8 @@
 
 in vec4 vColor;
 in vec4 fragPos;
-in vec2 iTexCoord;      
+in vec2 iTexCoord; 
+in vec3 localPos;
 
 out vec4 pixelColor;
 
@@ -51,6 +52,24 @@ void main() {
         float textureImpact = pow(grain, 1.1) * 1.3;
         baseColor = adjustedBase * textureImpact;
         alpha = vColor.a;
+    }
+    else if (useTexture == 3) {
+        if (abs(normal.y) > 0.7) {
+            baseColor = vec3(0.35, 0.35, 0.37); // Dach
+        } 
+        else {
+            vec2 buildingUV;
+            
+            // Zmniejszamy z 4.0 na 1.8 -> okna stan¹ siê wiêksze i bêdzie ich mniej
+            if (abs(normal.x) > 0.5) {
+                buildingUV = localPos.zy * 1.8; 
+            } else {
+                buildingUV = localPos.xy * 1.8; 
+            }
+            
+            baseColor = texture(tex, buildingUV).rgb;
+        }
+        alpha = 1.0;
     }
     else {
         // Brak tekstury (czysty kolor wierzcho³ków)

@@ -86,6 +86,7 @@ float* colors = myCubeColors;
 int vertexCount = myCubeVertexCount;
 
 extern GLuint texAsphalt; // Ta zmienna pozwoli przekazać teksturę do city_map.h
+extern GLuint texBuilding;
 
 //Procedura obsługi błędów
 void error_callback(int error, const char* description) {
@@ -173,6 +174,7 @@ void initOpenGLProgram(GLFWwindow* window) {
 	// Ładowanie Twojej tekstury ziarnistości asfaltu
 // (Zastąp "twoja_nazwa_pliku.jpg" dokładną nazwą pobranego obrazka)
 	texAsphalt = readTexture("asfalt.png");
+	texBuilding = readTexture("kamienica.png");
 
 	if (texChodnik == 0) {
 		printf("UWAGA: Tekstura nie zostala wczytana! Sprawdz plik chodnik.png\n");

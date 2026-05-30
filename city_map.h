@@ -8,6 +8,7 @@
 
 GLuint texChodnik;
 GLuint texAsphalt;
+GLuint texBuilding;
 
 // Uniwersalna funkcja do rysowania
 void drawSimple(ShaderProgram* sp, float* verts, float* colors, int vertexCount, bool useUV = false) {
@@ -253,12 +254,18 @@ void renderCity(ShaderProgram* sp, float offset) {
 
 // LEWA STRONA - rzadziej, co 40 jednostek
         for (int i = 0; i < 100; i += 40) {
+
             // Startujemy od 10m, ¿eby nie pokrywa³o siê z praw¹ stron¹
             float leftZ = shift + (float)i + 10.0f;
 
             M = glm::translate(glm::mat4(1.0f), glm::vec3(-19.0f, 0.0f, leftZ));
             M = glm::scale(M, glm::vec3(10.0f, 20.0f, 10.0f));
             glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, texBuilding);
+            glUniform1i(sp->u("tex"), 0);
+            glUniform1i(sp->u("useTexture"), 3);
             drawSimple(sp, unitCube, buildingColors, 36);
         }
 
@@ -270,6 +277,12 @@ void renderCity(ShaderProgram* sp, float offset) {
             M = glm::translate(glm::mat4(1.0f), glm::vec3(19.0f, 0.0f, rightZ));
             M = glm::scale(M, glm::vec3(10.0f, 20.0f, 10.0f));
             glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, texBuilding);
+            glUniform1i(sp->u("tex"), 0);
+            glUniform1i(sp->u("useTexture"), 3);
+
             drawSimple(sp, unitCube, buildingColors, 36);
         }
 
@@ -280,12 +293,18 @@ void renderCity(ShaderProgram* sp, float offset) {
             M = glm::translate(glm::mat4(1.0f), glm::vec3(10.0f, 0.0f, shift + i + 5.0f));
             M = glm::scale(M, glm::vec3(0.02f, 0.02f, 0.02f));
             glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+
+            glUniform1i(sp->u("useTexture"), 0);
+
             drawSimple(sp, treeVertices, tCols, treeVertexCount);
 
             // Drzewo Lewe - przesuniête o 20m wzglêdem prawego
             M = glm::translate(glm::mat4(1.0f), glm::vec3(-10.0f, 0.0f, shift + i + 25.0f));
             M = glm::scale(M, glm::vec3(0.02f, 0.02f, 0.02f));
             glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+
+            glUniform1i(sp->u("useTexture"), 0);
+
             drawSimple(sp, treeVertices, tCols, treeVertexCount);
         }
 
@@ -298,12 +317,18 @@ void renderCity(ShaderProgram* sp, float offset) {
             M = glm::translate(glm::mat4(1.0f), glm::vec3(lampX, 2.5f, lampZ));
             M = glm::scale(M, glm::vec3(0.15f, 5.0f, 0.15f));
             glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+
+            glUniform1i(sp->u("useTexture"), 0);
+
             drawSimple(sp, unitCube, getLampColors(), 36);
 
             // G³owica
             M = glm::translate(glm::mat4(1.0f), glm::vec3(lampX - 0.4f, 5.0f, lampZ));
             M = glm::scale(M, glm::vec3(0.8f, 0.15f, 0.2f));
             glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+
+            glUniform1i(sp->u("useTexture"), 0);
+
             drawSimple(sp, unitCube, getLampLightColors(), 36);
         }
     } // Koniec pêtli bloków
