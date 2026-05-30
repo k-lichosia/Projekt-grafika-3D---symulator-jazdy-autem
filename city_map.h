@@ -7,6 +7,7 @@
 #include "tree_model.h"
 
 GLuint texChodnik;
+GLuint texAsphalt;
 
 // Uniwersalna funkcja do rysowania
 void drawSimple(ShaderProgram* sp, float* verts, float* colors, int vertexCount, bool useUV = false) {
@@ -85,6 +86,17 @@ float* getLampLightColors() {
     return colors;
 }
 
+float* getCustomCurbColor(float brightness) {
+    static float colors[36 * 4];
+    for (int i = 0; i < 36; i++) {
+        colors[i * 4 + 0] = brightness; // R
+        colors[i * 4 + 1] = brightness; // G
+        colors[i * 4 + 2] = brightness; // B
+        colors[i * 4 + 3] = 1.0f;       // A
+    }
+    return colors;
+}
+
 void renderCity(ShaderProgram* sp, float offset) {
     glm::mat4 M;
 
@@ -121,16 +133,42 @@ void renderCity(ShaderProgram* sp, float offset) {
     // 3. G£ÓWNA PÊTLA RYSOWANIA (Dwa bloki miasta dla p³ynnoœci ruchu)
     for (int block = 0; block < 2; block++) {
         float shift = (block * 100.0f) - roadOffset;
+        // ====================================================================
+        // --- B1. JEZDNIA (ZAAWANSOWANE NAK£ADANIE STRUKTURY) ---
+        // ====================================================================
+        // 1. Aktywujemy jednostkê tekstury i przypisujemy obrazek asfaltu
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texAsphalt);
+        glUniform1i(sp->u("tex"), 0);
 
-        // --- A. JEZDNIA ---
+        // 2. W³¹czamy tryb 2 (Asfalt ze struktur¹ i pasami)
+        glUniform1i(sp->u("useTexture"), 2);
+
+        // 3. Pozycjonowanie drogi:
+        // Poniewa¿ nowa tablica poni¿ej ma ju¿ wbudowany w³aœciwy wymiar,
+        // stosujemy translacjê tylko wzd³u¿ osi Z (przesuniêcie klocków mapy)
         M = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, shift));
         glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
-        drawSimple(sp, roadVertices, roadColors, 6);
 
-        glUniform1i(sp->u("useTexture"), 1); // W³¹czamy teksturê kostki
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texChodnik);
-        glUniform1i(sp->u("tex"), 0);
+        // 4. Tworzymy now¹, lokaln¹ definicjê drogi z wbudowanymi UV (X, Y, Z, W, U, V)
+        // Droga ma szerokoœæ od -6 do +6 (dok³adnie tyle, ile wynosi Twój roadEdge)
+        // oraz d³ugoœæ 100 jednostek (od 0 do 100).
+        // Koordynaty U i V powtarzaj¹ siê, daj¹c piêkny efekt ziarnistoœci bez rozci¹gania.
+        float texturedRoadVertices[] = {
+            // Pierwszy trójk¹t
+            -6.0f, 0.0f,   0.0f, 1.0f,   0.0f,  0.0f,
+             6.0f, 0.0f,   0.0f, 1.0f,   3.0f,  0.0f,
+             6.0f, 0.0f, 100.0f, 1.0f,   3.0f, 25.0f,
+
+             // Drugi trójk¹t
+             -6.0f, 0.0f,   0.0f, 1.0f,   0.0f,  0.0f,
+              6.0f, 0.0f, 100.0f, 1.0f,   3.0f, 25.0f,
+             -6.0f, 0.0f, 100.0f, 1.0f,   0.0f, 25.0f
+        };
+
+        // Rysujemy za pomoc¹ drawSimple z flag¹ 'true' na koñcu!
+        // Dziêki temu funkcja przeczyta wspó³rzêdne UV z nowej tablicy.
+        drawSimple(sp, texturedRoadVertices, NULL, 6, true);
 
         // --- B. CHODNIKI Z TEKSTUR¥ KOSTKI ---
 
@@ -158,6 +196,33 @@ void renderCity(ShaderProgram* sp, float offset) {
         glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
 
         drawSimple(sp, sidewalkVertices, NULL, 6, true);
+
+        // --- LEWY CHODNIK ---
+        M = glm::translate(glm::mat4(1.0f), glm::vec3(-roadEdge, 0.01f, shift));
+        M = glm::scale(M, glm::vec3(-sidewalkW, 1.0f, 1.0f));
+        glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+
+        drawSimple(sp, sidewalkVertices, NULL, 6, true);
+
+        // ====================================================================
+        // --- B2. KRAWÊ¯NIKI (Sztuczne rozjaœnienie przez pozycjê Y) ---
+        // ====================================================================
+        glUniform1i(sp->u("useTexture"), 0);
+        glUniform1i(sp->u("lightCount"), lightCount); // Przywracamy normalne œwiat³o
+
+        // PRAWY KRAWÊ¯NIK
+        // Trik: podnosimy go minimalnie wy¿ej w skali Y (np. 0.35f), ¿eby góra 
+        // ³apa³a wiêcej œwiat³a z góry i by³a jaœniejsza
+        M = glm::translate(glm::mat4(1.0f), glm::vec3(roadEdge + 0.1f, 0.17f, shift + 50.0f));
+        M = glm::scale(M, glm::vec3(0.2f, 0.35f, 100.0f));
+        glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+        drawSimple(sp, unitCube, NULL, 36);
+
+        // LEWY KRAWÊ¯NIK
+        M = glm::translate(glm::mat4(1.0f), glm::vec3(-roadEdge - 0.1f, 0.17f, shift + 50.0f));
+        M = glm::scale(M, glm::vec3(0.2f, 0.35f, 100.0f));
+        glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+        drawSimple(sp, unitCube, NULL, 36);
 
         // --- KONIEC SEKCJI TEKSTUROWANEJ ---
         // Bardzo wa¿ne: wy³¹czamy teksturê, ¿eby budynki i jezdnia jej nie u¿ywa³y!

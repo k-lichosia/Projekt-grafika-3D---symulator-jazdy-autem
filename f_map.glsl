@@ -2,7 +2,7 @@
 
 in vec4 vColor;
 in vec4 fragPos;
-in vec2 iTexCoord;      // 1. Odbieramy wspó³rzêdne tekstury z Vertex Shadera
+in vec2 iTexCoord;      
 
 out vec4 pixelColor;
 
@@ -10,32 +10,59 @@ out vec4 pixelColor;
 uniform vec3 lightPositions[10];
 uniform int lightCount;
 
-// 2. NOWE: Obs³uga tekstury
-uniform sampler2D tex;  // Sampler dla pliku chodnik.jpg
-uniform int useTexture; // Prze³¹cznik: 1 = tekstura, 0 = kolor vColor
+// Obs³uga tekstury
+uniform sampler2D tex;  
+uniform int useTexture; 
 
 void main() {
-    // Obliczamy wektor normalny
+    // Obliczamy wektor normalny powierzchni
     vec3 normal = normalize(cross(dFdx(fragPos.xyz), dFdy(fragPos.xyz)));
 
-    // 3. Wybieramy bazowy kolor: albo ze zdjêcia, albo z vColor
     vec3 baseColor;
     float alpha;
+
     if (useTexture == 1) {
+        // Zwyk³e tekstrurowanie (np. chodnik z iTexCoord)
         vec4 texColor = texture(tex, iTexCoord);
         baseColor = texColor.rgb;
         alpha = texColor.a;
-    } else {
+    } 
+   else if (useTexture == 2) {
+        // Mapowanie UV dla tekstury asfaltu
+        vec2 autoUV = fragPos.xz * 0.4;
+        vec4 texColor = texture(tex, autoUV);
+        
+        // Wykrywamy podbudowê asfaltu (ciemne wierzcho³ki)
+        vec3 adjustedBase;
+        if (vColor.r < 0.2 && vColor.g < 0.2) {
+            // ROZJAŒNIAMY: Zmieniamy wartoœci z 0.24 na 0.42.
+            // Da to ³adny, wyraŸny, betonowo-szary asfalt, który odetnie siê od krawê¿nika!
+            adjustedBase = vec3(0.42, 0.43, 0.45); 
+        } else {
+            // Pasy zostaj¹ idealnie jasne
+            adjustedBase = vColor.rgb;
+        }
+        
+        // Wyci¹gamy ziarnistoœæ z pliku tekstury
+        float grain = (texColor.r + texColor.g + texColor.b) / 3.0;
+        
+        // £¹czymy bazê z tekstur¹ (lekko tonujemy kontrast, ¿eby przy jaœniejszym asfalcie
+        // kropki i pêkniêcia wygl¹da³y naturalnie)
+        float textureImpact = pow(grain, 1.1) * 1.3;
+        baseColor = adjustedBase * textureImpact;
+        alpha = vColor.a;
+    }
+    else {
+        // Brak tekstury (czysty kolor wierzcho³ków)
         baseColor = vColor.rgb;
         alpha = vColor.a;
     }
 
-    // Ambient - delikatne œwiat³o sta³e
+    // Ambient - delikatne œwiat³o sta³e sceny
     vec3 ambient = 0.55 * baseColor; 
-    
     vec3 diffuseAccumulator = vec3(0.0);
 
-    // Pêtla obliczaj¹ca œwiat³o od ka¿dej latarni
+    // Pêtla obliczaj¹ca œwiat³o od ka¿dej latarni miejskiej
     for(int i = 0; i < lightCount; i++) {
         vec3 lightDir = normalize(lightPositions[i] - fragPos.xyz);
         float diff = max(dot(normal, lightDir), 0.0);
@@ -47,12 +74,10 @@ void main() {
         diffuseAccumulator += diff * vec3(1.0, 0.9, 0.6) * attenuation;
     }
 
-    // Finalny kolor
-    // Jeœli to ¿arówka (bardzo jasny ¿ó³ty), œwieci w³asnym œwiat³em
+    // Ostateczne wyznaczenie koloru piksela
     if (vColor.r > 0.9 && vColor.g > 0.8 && useTexture == 0) {
         pixelColor = vColor;
     } else {
-        // Dla reszty œwiata: (Ambient + Suma œwiate³) * Kolor bazy (tekstura lub vColor)
         pixelColor = vec4((ambient + diffuseAccumulator) * baseColor, alpha);
     }
 }
