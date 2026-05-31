@@ -44,6 +44,7 @@
   <ItemGroup>
     <Image Include="asfalt.png" />
     <Image Include="kamienica.png" />
+    <Image Include="trawa.png" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

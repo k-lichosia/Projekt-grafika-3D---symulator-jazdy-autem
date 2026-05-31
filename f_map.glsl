@@ -1,9 +1,11 @@
-#version 330
+#version 330 core
 
+// Dane wejœciowe z Vertex Shadera (musz¹ idealnie pasowaæ do v_map.glsl)
 in vec4 vColor;
 in vec4 fragPos;
 in vec2 iTexCoord; 
 in vec3 localPos;
+in float Height; // <-- DODANE: Odbieramy wysokoœæ warstwy (0.0 do 1.0)
 
 out vec4 pixelColor;
 
@@ -15,12 +17,16 @@ uniform int lightCount;
 uniform sampler2D tex;  
 uniform int useTexture; 
 
+// --- DODANE UNIFORMY DO OBS£UGI WARSTW ---
+uniform int currentLayer;   
+uniform int totalLayers;    
+
 void main() {
     // Obliczamy wektor normalny powierzchni
     vec3 normal = normalize(cross(dFdx(fragPos.xyz), dFdy(fragPos.xyz)));
 
     vec3 baseColor;
-    float alpha;
+    float alpha = 1.0;
 
     if (useTexture == 1) {
         // Zwyk³e tekstrurowanie (np. chodnik z iTexCoord)
@@ -28,7 +34,7 @@ void main() {
         baseColor = texColor.rgb;
         alpha = texColor.a;
     } 
-   else if (useTexture == 2) {
+    else if (useTexture == 2) {
         // Mapowanie UV dla tekstury asfaltu
         vec2 autoUV = fragPos.xz * 0.4;
         vec4 texColor = texture(tex, autoUV);
@@ -36,19 +42,12 @@ void main() {
         // Wykrywamy podbudowê asfaltu (ciemne wierzcho³ki)
         vec3 adjustedBase;
         if (vColor.r < 0.2 && vColor.g < 0.2) {
-            // ROZJAŒNIAMY: Zmieniamy wartoœci z 0.24 na 0.42.
-            // Da to ³adny, wyraŸny, betonowo-szary asfalt, który odetnie siê od krawê¿nika!
             adjustedBase = vec3(0.42, 0.43, 0.45); 
         } else {
-            // Pasy zostaj¹ idealnie jasne
             adjustedBase = vColor.rgb;
         }
         
-        // Wyci¹gamy ziarnistoœæ z pliku tekstury
         float grain = (texColor.r + texColor.g + texColor.b) / 3.0;
-        
-        // £¹czymy bazê z tekstur¹ (lekko tonujemy kontrast, ¿eby przy jaœniejszym asfalcie
-        // kropki i pêkniêcia wygl¹da³y naturalnie)
         float textureImpact = pow(grain, 1.1) * 1.3;
         baseColor = adjustedBase * textureImpact;
         alpha = vColor.a;
@@ -59,16 +58,25 @@ void main() {
         } 
         else {
             vec2 buildingUV;
-            
-            // Zmniejszamy z 4.0 na 1.8 -> okna stan¹ siê wiêksze i bêdzie ich mniej
             if (abs(normal.x) > 0.5) {
                 buildingUV = localPos.zy * 1.8; 
             } else {
                 buildingUV = localPos.xy * 1.8; 
             }
-            
             baseColor = texture(tex, buildingUV).rgb;
         }
+        alpha = 1.0;
+    }
+    // ====================================================================
+    // --- ZMODYFIKOWANA SEKCJA 4: TRÓJWYMIAROWA TRAWA WARSTWOWA ---
+    // ====================================================================
+else if (useTexture == 4) {
+        // Skalujemy teksturê na bazie pozycji œwiata, by kêpki by³y drobne i gêste
+        vec2 grassUV = fragPos.xz * 2.5; 
+        vec4 texColor = texture(tex, grassUV);
+        
+        // Soczysty, jasny kolor trawy dopasowany do sceny nocnej
+        baseColor = texColor.rgb * 1.5; 
         alpha = 1.0;
     }
     else {
@@ -89,7 +97,6 @@ void main() {
         float distance = length(lightPositions[i] - fragPos.xyz);
         float attenuation = 1.0 / (1.0 + 0.02 * distance + 0.001 * (distance * distance));
         
-        // Dodajemy blask latarni
         diffuseAccumulator += diff * vec3(1.0, 0.9, 0.6) * attenuation;
     }
 
@@ -97,6 +104,7 @@ void main() {
     if (vColor.r > 0.9 && vColor.g > 0.8 && useTexture == 0) {
         pixelColor = vColor;
     } else {
+        // Dla trawy mieszamy œwiat³o latarni z rozjaœnion¹ baz¹ warstwow¹
         pixelColor = vec4((ambient + diffuseAccumulator) * baseColor, alpha);
     }
 }

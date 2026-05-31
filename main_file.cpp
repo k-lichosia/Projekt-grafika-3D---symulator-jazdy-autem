@@ -87,6 +87,7 @@ int vertexCount = myCubeVertexCount;
 
 extern GLuint texAsphalt; // Ta zmienna pozwoli przekazać teksturę do city_map.h
 extern GLuint texBuilding;
+extern GLuint texGrass;
 
 //Procedura obsługi błędów
 void error_callback(int error, const char* description) {
@@ -175,6 +176,7 @@ void initOpenGLProgram(GLFWwindow* window) {
 // (Zastąp "twoja_nazwa_pliku.jpg" dokładną nazwą pobranego obrazka)
 	texAsphalt = readTexture("asfalt.png");
 	texBuilding = readTexture("kamienica.png");
+	texGrass = readTexture("trawa.png");
 
 	if (texChodnik == 0) {
 		printf("UWAGA: Tekstura nie zostala wczytana! Sprawdz plik chodnik.png\n");
