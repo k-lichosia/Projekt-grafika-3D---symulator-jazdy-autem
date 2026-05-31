@@ -59,6 +59,10 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include "Car.h"
 #include "samochodyOBJ.h"
 
+#include <windows.h>
+#include <mmsystem.h>
+#pragma comment(lib, "winmm.lib")
+
 
 #pragma comment(lib, "glew32s.lib")
 #pragma comment(lib, "glfw3.lib")
@@ -314,6 +318,9 @@ int main(void)
 	initOpenGLProgram(window);
 
 	glfwSetTime(0);
+
+	// Odtwarzanie w tle (ASYNC) i automatyczne zapętlenie utworu (LOOP)
+	PlaySound(TEXT("muzyka.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_LOOP);
 
 	while (!glfwWindowShouldClose(window)) {
 		float deltaTime = glfwGetTime();

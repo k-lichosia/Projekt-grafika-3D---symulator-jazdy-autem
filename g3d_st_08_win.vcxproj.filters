@@ -82,4 +82,9 @@
       <Filter>Pliki zasobów</Filter>
     </Image>
   </ItemGroup>
+  <ItemGroup>
+    <Media Include="muzyka.wav">
+      <Filter>Pliki zasobów</Filter>
+    </Media>
+  </ItemGroup>
 </Project>

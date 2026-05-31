@@ -46,6 +46,9 @@
     <Image Include="kamienica.png" />
     <Image Include="trawa.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Media Include="muzyka.wav" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{7288C82C-3F3E-4501-8878-A310FCA284FE}</ProjectGuid>
