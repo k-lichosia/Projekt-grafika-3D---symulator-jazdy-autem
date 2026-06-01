@@ -4,6 +4,8 @@
 #include <GLFW/glfw3.h>
 #include <math.h>
 
+
+
 class Car {
 private:
     // Pomocnicza funkcja do rysowania opony (zamiast glutSolidTorus)
@@ -57,6 +59,10 @@ public:
     float x, y, z;        // Pozycja samochodu
     float wheelAngle;     // K¹t obrotu kó³
     float r, g, b;        // Kolor karoserii
+
+    float colorR = 1.0f;
+    float colorG = 1.0f;
+    float colorB = 1.0f;
 
     // Konstruktor ustawiaj¹cy domyœln¹ pozycjê
     Car(float startX = 0.0f, float startY = 0.0f, float startZ = 0.0f)

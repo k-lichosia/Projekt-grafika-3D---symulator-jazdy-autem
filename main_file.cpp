@@ -275,11 +275,10 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
 		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
 
-		modelSamochodu.draw();
+		modelSamochodu.draw(inneAuta[i].colorR, inneAuta[i].colorG, inneAuta[i].colorB);
 
 		glDisable(GL_NORMALIZE);
 		glDisable(GL_LIGHTING);
-
 		glPopMatrix();
 	}
 	glfwSwapBuffers(window);
@@ -332,6 +331,7 @@ int main(void)
 		autoGracza.z += speed_y * deltaTime * 5.0f;
 		autoGracza.wheelAngle += 200.0f * deltaTime;
 
+		// 1. Odliczanie czasu i pojawianie się nowych aut
 		spawnTimer += deltaTime;
 		if (spawnTimer > 3.5f) {
 			float lewyPas = -3.0f;
@@ -339,17 +339,43 @@ int main(void)
 
 			float laneX = (rand() % 100 < 50) ? lewyPas : prawyPas;
 
-			inneAuta.push_back(Car(laneX, 0.5f, 40.0f));
+			// 1. Tworzymy tymczasowy obiekt samochodu
+			Car npc(laneX, 0.5f, 40.0f);
+
+			// 2. Definiujemy paletę 6 fajnych, żywych kolorów (RGB)
+			float paletaBarw[6][3] = {
+				{0.0f, 0.8f, 0.2f}, // 0: Zielony
+				{0.1f, 0.5f, 1.0f}, // 1: Niebieski
+				{1.0f, 0.4f, 0.7f}, // 2: Różowy
+				{1.0f, 0.8f, 0.0f}, // 3: Żółty
+				{0.9f, 0.1f, 0.1f}, // 4: Czerwony
+				{1.0f, 0.5f, 0.0f}  // 5: Pomarańczowy
+			};
+
+			// 3. Losujemy indeks od 0 do 5 z naszej palety
+			int losowyIndeks = rand() % 6;
+
+			// 4. Przypisujemy wylosowane kolory do tego konkretnego auta
+			npc.colorR = paletaBarw[losowyIndeks][0];
+			npc.colorG = paletaBarw[losowyIndeks][1];
+			npc.colorB = paletaBarw[losowyIndeks][2];
+
+			// 5. Wrzucamy w pełni pokolorowane auto do wektora ruchu ulicznego
+			inneAuta.push_back(npc);
+
 			spawnTimer = 0.0f;
 		}
 
 		for (int i = 0; i < inneAuta.size(); i++) {
-			inneAuta[i].z -= 25.0f * deltaTime;
-			inneAuta[i].wheelAngle -= 200.0f * deltaTime;
 
+			// KLUCZ: Odejmujemy od Z, żeby auta poruszały się z Z=40 w stronę kamery (Z=-10)
+			inneAuta[i].z -= 25.0f * deltaTime;
+			inneAuta[i].wheelAngle -= 200.0f * deltaTime; // Koła kręcą się do przodu (w naszym kierunku)
+
+			// Gdy auto minie gracza i przejedzie za kamerę (Z stanie się mniejsze niż -10), usuwamy je
 			if (inneAuta[i].z < -10.0f) {
 				inneAuta.erase(inneAuta.begin() + i);
-				i--;
+				i--; // Cofamy indeks, żeby nie pominąć kolejnego auta w wektorze
 			}
 		}
 
