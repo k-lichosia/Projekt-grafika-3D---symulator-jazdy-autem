@@ -56,7 +56,6 @@ public:
     float colorG = 1.0f;
     float colorB = 1.0f;
 
-    // Stan œwiate³: 0 = wy³¹czone, 1 = lewy, 2 = prawy, 3 = awaryjne
     int indicatorMode = 0;
 
     Car(float startX = 0.0f, float startY = 0.0f, float startZ = 0.0f)
@@ -83,7 +82,7 @@ public:
         glMaterialfv(GL_FRONT, GL_SHININESS, body_shininess);
 
         // ==========================================
-        // 1. G£ÓWNA BRY£A SAMOCHODU (ZIELONA BLACHA)
+        // 1. G£ÓWNA BRY£A SAMOCHODU
         // ==========================================
         glBegin(GL_QUADS);
         glColor3f(r, g, b);
@@ -143,12 +142,17 @@ public:
         glMaterialfv(GL_FRONT, GL_SPECULAR, body_specular);
         glMaterialfv(GL_FRONT, GL_SHININESS, body_shininess);
 
+        // ZEGAR MIGANIE (Wyci¹gniêty wy¿ej, ¿eby nak³ada³ siê te¿ na poœwiatê pod³o¿a)
+        bool flashOn = ((int)(wheelAngle / 20.0f) % 2) == 0;
+        bool showLeft = flashOn && (indicatorMode == 1 || indicatorMode == 3);
+        bool showRight = flashOn && (indicatorMode == 2 || indicatorMode == 3);
+
         // ==========================================
-        // 3. MATRYCA ŒWIATE£ (SAMES ¯ARÓWKI - EMISSION)
+        // 3. MATRYCA ŒWIATE£ NA KAROSERII (¯ARÓWKI)
         // ==========================================
         GLfloat noGlow[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-        // --- G£ÓWNE REFLEKTORY PRZÓD (Czyste, jasne ksenony) ---
+        // --- G£ÓWNE REFLEKTORY PRZÓD ---
         GLfloat glowLight[] = { 1.0f, 1.0f, 1.0f, 1.0f };
         glMaterialfv(GL_FRONT, GL_EMISSION, glowLight);
         glColor3f(1.0f, 1.0f, 1.0f);
@@ -157,7 +161,7 @@ public:
         glVertex3f(0.199f, 0.35f, 0.47f); glVertex3f(0.199f, 0.35f, 0.55f); glVertex3f(0.199f, 0.27f, 0.55f); glVertex3f(0.199f, 0.27f, 0.47f);
         glEnd();
 
-        // --- TYLNE LAMPY STOPU (Czyste czerwone klosze) ---
+        // --- TYLNE LAMPY STOPU ---
         GLfloat rearGlowLight[] = { 1.0f, 0.0f, 0.0f, 1.0f };
         glMaterialfv(GL_FRONT, GL_EMISSION, rearGlowLight);
         glColor3f(1.0f, 0.1f, 0.1f);
@@ -166,27 +170,19 @@ public:
         glVertex3f(2.101f, 0.35f, 0.47f); glVertex3f(2.101f, 0.35f, 0.55f); glVertex3f(2.101f, 0.27f, 0.55f); glVertex3f(2.101f, 0.27f, 0.47f);
         glEnd();
 
-        // --- KIERUNKOWSKAZY (Miganie na krawêdziach zderzaków) ---
-        bool flashOn = ((int)(wheelAngle / 20.0f) % 2) == 0;
-        bool showLeft = flashOn && (indicatorMode == 1 || indicatorMode == 3);
-        bool showRight = flashOn && (indicatorMode == 2 || indicatorMode == 3);
-
+        // --- ¯ARÓWKI KIERUNKOWSKAZÓW ---
         GLfloat orangeGlow[] = { 1.0f, 0.5f, 0.0f, 1.0f };
 
-        // Lewa strona
         if (showLeft) {
-            glMaterialfv(GL_FRONT, GL_EMISSION, orangeGlow);
-            glColor3f(1.0f, 0.5f, 0.0f);
+            glMaterialfv(GL_FRONT, GL_EMISSION, orangeGlow); glColor3f(1.0f, 0.5f, 0.0f);
             glBegin(GL_QUADS);
             glVertex3f(0.198f, 0.34f, 0.20f); glVertex3f(0.198f, 0.34f, 0.24f); glVertex3f(0.198f, 0.28f, 0.24f); glVertex3f(0.198f, 0.28f, 0.20f);
             glVertex3f(2.102f, 0.34f, 0.20f); glVertex3f(2.102f, 0.34f, 0.24f); glVertex3f(2.102f, 0.28f, 0.24f); glVertex3f(2.102f, 0.28f, 0.20f);
             glEnd();
         }
 
-        // Prawa strona
         if (showRight) {
-            glMaterialfv(GL_FRONT, GL_EMISSION, orangeGlow);
-            glColor3f(1.0f, 0.5f, 0.0f);
+            glMaterialfv(GL_FRONT, GL_EMISSION, orangeGlow); glColor3f(1.0f, 0.5f, 0.0f);
             glBegin(GL_QUADS);
             glVertex3f(0.198f, 0.34f, 0.56f); glVertex3f(0.198f, 0.34f, 0.59f); glVertex3f(0.198f, 0.28f, 0.59f); glVertex3f(0.198f, 0.28f, 0.56f);
             glVertex3f(2.102f, 0.34f, 0.56f); glVertex3f(2.102f, 0.34f, 0.59f); glVertex3f(2.102f, 0.28f, 0.59f); glVertex3f(2.102f, 0.28f, 0.56f);
@@ -195,8 +191,58 @@ public:
 
         glMaterialfv(GL_FRONT, GL_EMISSION, noGlow);
 
+        // ========================================================
+        // 4. SYSTEM POŒWIAT POD£O¯OWYCH (NA ASFALCIE)
+        // ========================================================
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+        glDisable(GL_LIGHTING);
+
+        float roadY = 0.112f;
+
+        glBegin(GL_QUADS);
+
+        // --- A. DELIKATNE CZERWONE PASKI ZA POJAZDEM (STA£E) ---
+        float glowStart = 2.1f;
+        float glowEnd = 2.8f;
+
+        // Lewy czerwony pasek pod³o¿a
+        glColor4f(1.0f, 0.0f, 0.0f, 0.25f);	glVertex3f(glowStart, roadY, 0.23f); glVertex3f(glowStart, roadY, 0.35f);
+        glColor4f(1.0f, 0.0f, 0.0f, 0.0f);	glVertex3f(glowEnd, roadY, 0.35f);   glVertex3f(glowEnd, roadY, 0.23f);
+
+        // Prawy czerwony pasek pod³o¿a
+        glColor4f(1.0f, 0.0f, 0.0f, 0.25f);	glVertex3f(glowStart, roadY, 0.45f); glVertex3f(glowStart, roadY, 0.57f);
+        glColor4f(1.0f, 0.0f, 0.0f, 0.0f);	glVertex3f(glowEnd, roadY, 0.57f);   glVertex3f(glowEnd, roadY, 0.45f);
+
+
+        // --- B. NOWOŒÆ: DELIKATNE POMARAÑCZOWE PASKI KIERUNKOWSKAZÓW (MIGAJ¥CE) ---
+        if (showLeft) {
+            // Przód lewy (krótki pasek rzucany przed lewy przedni naro¿nik)
+            glColor4f(1.0f, 0.5f, 0.0f, 0.25f); glVertex3f(0.2f, roadY, 0.18f);  glVertex3f(0.2f, roadY, 0.26f);
+            glColor4f(1.0f, 0.5f, 0.0f, 0.0f);  glVertex3f(-0.4f, roadY, 0.26f); glVertex3f(-0.4f, roadY, 0.18f);
+
+            // Ty³ lewy (krótki pasek rzucany za lewy tylny naro¿nik)
+            glColor4f(1.0f, 0.5f, 0.0f, 0.25f); glVertex3f(2.1f, roadY, 0.18f);  glVertex3f(2.1f, roadY, 0.26f);
+            glColor4f(1.0f, 0.5f, 0.0f, 0.0f);  glVertex3f(2.7f, roadY, 0.26f);  glVertex3f(2.7f, roadY, 0.18f);
+        }
+
+        if (showRight) {
+            // Przód prawy (krótki pasek rzucany przed prawy przedni naro¿nik)
+            glColor4f(1.0f, 0.5f, 0.0f, 0.25f); glVertex3f(0.2f, roadY, 0.53f);  glVertex3f(0.2f, roadY, 0.61f);
+            glColor4f(1.0f, 0.5f, 0.0f, 0.0f);  glVertex3f(-0.4f, roadY, 0.61f); glVertex3f(-0.4f, roadY, 0.53f);
+
+            // Ty³ prawy (krótki pasek rzucany za prawy tylny naro¿nik)
+            glColor4f(1.0f, 0.5f, 0.0f, 0.25f); glVertex3f(2.1f, roadY, 0.53f);  glVertex3f(2.1f, roadY, 0.61f);
+            glColor4f(1.0f, 0.5f, 0.0f, 0.0f);  glVertex3f(2.7f, roadY, 0.61f);  glVertex3f(2.7f, roadY, 0.53f);
+        }
+
+        glEnd();
+
+        glEnable(GL_LIGHTING);
+        glDisable(GL_BLEND);
+
         // ==========================================
-        // 4. SYSTEM ZAP£ONU (Rura z ty³u)
+        // 5. SYSTEM ZAP£ONU (Rura z ty³u)
         // ==========================================
         glPushMatrix();
         glColor3f(0.4f, 0.4f, 0.4f);
@@ -207,7 +253,7 @@ public:
         glPopMatrix();
 
         // ==========================================
-        // 5. KO£A (WHEELS)
+        // 6. KO£A (WHEELS)
         // ==========================================
         glColor3f(0.7f, 0.7f, 0.7f);
         glPushMatrix();

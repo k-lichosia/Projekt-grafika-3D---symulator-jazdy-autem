@@ -285,8 +285,33 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 
 		modelSamochodu.draw(inneAuta[i].colorR, inneAuta[i].colorG, inneAuta[i].colorB);
 
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE); // Tryb mieszania potęgujący jasność asfaltu
+		glDisable(GL_LIGHTING);            // Wyłączamy cienie, aby snop światła był jasny
+
+		glBegin(GL_QUADS);
+
+		// Ponieważ auto NPC leży na wysokości Y = 0.5f, wartość -0.388f 
+		// idealnie kładzie poświatę na asfalcie (0.5 - 0.388 = 0.112f)
+		float npcRoadY = -0.388f;
+
+		// KROK A: Początek snopu światła (przy zderzaku) - jasny, lekko żółtawy (Alpha = 0.45f)
+		glColor4f(1.0f, 1.0f, 0.8f, 0.45f);
+		glVertex3f(-0.9f, npcRoadY, 1.2f); // Lewy reflektor NPC
+		glVertex3f(0.9f, npcRoadY, 1.2f); // Prawy reflektor NPC
+
+		// KROK B: Koniec snopu światła (w oddali) - rozszerza się i zanika (Alpha = 0.0f)
+		glColor4f(1.0f, 1.0f, 0.8f, 0.0f);
+		glVertex3f(3.0f, npcRoadY, 12.0f); // Szeroko po prawej stronie drogi w dali
+		glVertex3f(-3.0f, npcRoadY, 12.0f); // Szeroko po lewej stronie drogi w dali
+
+		glEnd();
+
+		glEnable(GL_LIGHTING);
+		glDisable(GL_BLEND);
+		// ========================================================
+
 		glDisable(GL_NORMALIZE);
-		glDisable(GL_LIGHTING);
 		glPopMatrix();
 	}
 	glfwSwapBuffers(window);
