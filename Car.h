@@ -4,15 +4,10 @@
 #include <GLFW/glfw3.h>
 #include <math.h>
 
-
-
 class Car {
 private:
-    // Pomocnicza funkcja do rysowania opony (zamiast glutSolidTorus)
     void drawTire(float radius, float thickness) {
-        glColor3f(0.05f, 0.05f, 0.05f); // Ciemnoszary/czarny kolor opony
-
-        // Bie¿nik (obramowanie opony)
+        glColor3f(0.05f, 0.05f, 0.05f);
         glBegin(GL_QUAD_STRIP);
         for (int i = 0; i <= 20; i++) {
             float angle = i * 3.14159f * 2.0f / 20.0f;
@@ -23,7 +18,6 @@ private:
         }
         glEnd();
 
-        // Felga/Zewnêtrzna strona opony
         glBegin(GL_TRIANGLE_FAN);
         glVertex3f(0.0f, 0.0f, thickness / 2.0f);
         for (int i = 0; i <= 20; i++) {
@@ -32,7 +26,6 @@ private:
         }
         glEnd();
 
-        // Wewnêtrzna strona opony
         glBegin(GL_TRIANGLE_FAN);
         glVertex3f(0.0f, 0.0f, -thickness / 2.0f);
         for (int i = 20; i >= 0; i--) {
@@ -42,7 +35,6 @@ private:
         glEnd();
     }
 
-    // Pomocnicza funkcja do rysowania rury wydechowej (zamiast gluCylinder)
     void drawExhaust(float radius1, float radius2, float length) {
         glBegin(GL_QUAD_STRIP);
         for (int i = 0; i <= 10; i++) {
@@ -56,179 +48,215 @@ private:
     }
 
 public:
-    float x, y, z;        // Pozycja samochodu
-    float wheelAngle;     // K¹t obrotu kó³
-    float r, g, b;        // Kolor karoserii
+    float x, y, z;
+    float wheelAngle;
+    float r, g, b;
 
     float colorR = 1.0f;
     float colorG = 1.0f;
     float colorB = 1.0f;
 
-    // Konstruktor ustawiaj¹cy domyœln¹ pozycjê
+    // Stan œwiate³: 0 = wy³¹czone, 1 = lewy, 2 = prawy, 3 = awaryjne
+    int indicatorMode = 0;
+
     Car(float startX = 0.0f, float startY = 0.0f, float startZ = 0.0f)
-        : x(startX), y(startY), z(startZ), wheelAngle(0.0f), r(0.8f), g(0.0f), b(0.0f) {
+        : x(startX), y(startY), z(startZ), wheelAngle(0.0f), r(0.0f), g(0.7f), b(0.15f) {
     }
 
-    // Funkcja aktualizuj¹ca pozycjê auta i obrót kó³
+    void toggleLeftIndicator() { indicatorMode = (indicatorMode == 1) ? 0 : 1; }
+    void toggleRightIndicator() { indicatorMode = (indicatorMode == 2) ? 0 : 2; }
+    void toggleHazardLights() { indicatorMode = (indicatorMode == 3) ? 0 : 3; }
+
     void move(float speed) {
-        x += speed; // Przesuniêcie wzd³u¿ osi X
-        wheelAngle += speed * 50.0f; // Animacja obrotu kó³
+        x += speed;
+        wheelAngle += speed * 50.0f;
     }
 
-    // Funkcja ustawiaj¹ca nowy kolor
     void setColor(float red, float green, float blue) {
         r = red; g = green; b = blue;
     }
 
-    // FUNKCJA RYSOWAÑCA (BEZ ZMIANY POZYCJI) - idealna do drawScene
     void draw_model_only() {
+        GLfloat body_specular[] = { 0.6f, 0.6f, 0.6f, 1.0f };
+        GLfloat body_shininess[] = { 50.0f };
+        glMaterialfv(GL_FRONT, GL_SPECULAR, body_specular);
+        glMaterialfv(GL_FRONT, GL_SHININESS, body_shininess);
+
         // ==========================================
-        // 1. G£ÓWNA BRY£A SAMOCHODU (QUADS)
+        // 1. G£ÓWNA BRY£A SAMOCHODU (ZIELONA BLACHA)
         // ==========================================
         glBegin(GL_QUADS);
-
-        // --- FRONT BODY ---
         glColor3f(r, g, b);
-        glVertex3f(0.2, 0.4, 0.6); glVertex3f(0.6, 0.5, 0.6); glVertex3f(0.6, 0.5, 0.2); glVertex3f(0.2, 0.4, 0.2);
-        glVertex3f(0.2, 0.4, 0.6); glVertex3f(0.6, 0.2, 0.6); glVertex3f(0.6, 0.2, 0.2); glVertex3f(0.2, 0.2, 0.2);
-        glVertex3f(0.2, 0.2, 0.6); glVertex3f(0.2, 0.4, 0.6); glVertex3f(0.2, 0.4, 0.2); glVertex3f(0.2, 0.2, 0.2);
-        glVertex3f(0.6, 0.2, 0.6); glVertex3f(0.6, 0.5, 0.6); glVertex3f(0.6, 0.5, 0.2); glVertex3f(0.6, 0.2, 0.2);
-        glVertex3f(0.2, 0.2, 0.6); glVertex3f(0.6, 0.2, 0.6); glVertex3f(0.6, 0.5, 0.6); glVertex3f(0.2, 0.4, 0.6);
-        glVertex3f(0.2, 0.2, 0.2); glVertex3f(0.6, 0.2, 0.2); glVertex3f(0.6, 0.5, 0.2); glVertex3f(0.2, 0.4, 0.2);
-        glVertex3f(0.7, 0.65, 0.6); glVertex3f(0.7, 0.65, 0.2); glVertex3f(1.7, 0.65, 0.2); glVertex3f(1.7, 0.65, 0.6);
+        glVertex3f(0.2f, 0.4f, 0.6f); glVertex3f(0.6f, 0.5f, 0.6f); glVertex3f(0.6f, 0.5f, 0.2f); glVertex3f(0.2f, 0.4f, 0.2f);
+        glVertex3f(0.2f, 0.4f, 0.6f); glVertex3f(0.6f, 0.2f, 0.6f); glVertex3f(0.6f, 0.2f, 0.2f); glVertex3f(0.2f, 0.2f, 0.2f);
+        glVertex3f(0.2f, 0.2f, 0.6f); glVertex3f(0.2f, 0.4f, 0.6f); glVertex3f(0.2f, 0.4f, 0.2f); glVertex3f(0.2f, 0.2f, 0.2f);
+        glVertex3f(0.6f, 0.2f, 0.6f); glVertex3f(0.6f, 0.5f, 0.6f); glVertex3f(0.6f, 0.5f, 0.2f); glVertex3f(0.6f, 0.2f, 0.2f);
+        glVertex3f(0.2f, 0.2f, 0.6f); glVertex3f(0.6f, 0.2f, 0.6f); glVertex3f(0.6f, 0.5f, 0.6f); glVertex3f(0.2f, 0.4f, 0.6f);
+        glVertex3f(0.2f, 0.2f, 0.2f); glVertex3f(0.6f, 0.2f, 0.2f); glVertex3f(0.6f, 0.5f, 0.2f); glVertex3f(0.2f, 0.4f, 0.2f);
+        glVertex3f(0.7f, 0.65f, 0.6f); glVertex3f(0.7f, 0.65f, 0.2f); glVertex3f(1.7f, 0.65f, 0.2f); glVertex3f(1.7f, 0.65f, 0.6f);
 
-        // --- BACK GUARD ---
-        glColor3f(r, g, b);
-        glVertex3f(1.8, 0.5, 0.6); glVertex3f(1.8, 0.5, 0.2); glVertex3f(2.1, 0.4, 0.2); glVertex3f(2.1, 0.4, 0.6);
-        glVertex3f(2.1, 0.2, 0.6); glVertex3f(2.1, 0.2, 0.2); glVertex3f(1.8, 0.2, 0.6); glVertex3f(1.8, 0.2, 0.6);
-        glVertex3f(2.1, 0.4, 0.6); glVertex3f(2.1, 0.4, 0.2); glVertex3f(2.1, 0.2, 0.2); glVertex3f(2.1, 0.2, 0.6);
-        glVertex3f(1.8, 0.2, 0.2); glVertex3f(1.8, 0.5, 0.2); glVertex3f(2.1, 0.4, 0.2); glVertex3f(2.1, 0.2, 0.2);
-        glVertex3f(1.8, 0.2, 0.6); glVertex3f(1.8, 0.5, 0.6); glVertex3f(2.1, 0.4, 0.6); glVertex3f(2.1, 0.2, 0.6);
+        glVertex3f(1.8f, 0.5f, 0.6f); glVertex3f(1.8f, 0.5f, 0.2f); glVertex3f(2.1f, 0.4f, 0.2f); glVertex3f(2.1f, 0.4f, 0.6f);
+        glVertex3f(2.1f, 0.2f, 0.6f); glVertex3f(2.1f, 0.2f, 0.2f); glVertex3f(1.8f, 0.2f, 0.6f); glVertex3f(1.8f, 0.2f, 0.6f);
+        glVertex3f(2.1f, 0.4f, 0.6f); glVertex3f(2.1f, 0.4f, 0.2f); glVertex3f(2.1f, 0.2f, 0.2f); glVertex3f(2.1f, 0.2f, 0.6f);
+        glVertex3f(1.8f, 0.2f, 0.2f); glVertex3f(1.8f, 0.5f, 0.2f); glVertex3f(2.1f, 0.4f, 0.2f); glVertex3f(2.1f, 0.2f, 0.2f);
+        glVertex3f(1.8f, 0.2f, 0.6f); glVertex3f(1.8f, 0.5f, 0.6f); glVertex3f(2.1f, 0.4f, 0.6f); glVertex3f(2.1f, 0.2f, 0.6f);
 
-        // --- MIDDLE BODY ---
-        glVertex3f(0.6, 0.5, 0.6); glVertex3f(0.6, 0.2, 0.6); glVertex3f(1.8, 0.2, 0.6); glVertex3f(1.8, 0.5, 0.6);
-        glVertex3f(0.6, 0.2, 0.6); glVertex3f(0.6, 0.2, 0.2); glVertex3f(1.8, 0.2, 0.2); glVertex3f(1.8, 0.2, 0.6);
-        glVertex3f(0.6, 0.5, 0.2); glVertex3f(0.6, 0.2, 0.2); glVertex3f(1.8, 0.2, 0.2); glVertex3f(1.8, 0.5, 0.2);
+        glVertex3f(0.6f, 0.5f, 0.6f); glVertex3f(0.6f, 0.2f, 0.6f); glVertex3f(1.8f, 0.2f, 0.6f); glVertex3f(1.8f, 0.5f, 0.6f);
+        glVertex3f(0.6f, 0.2f, 0.6f); glVertex3f(0.6f, 0.2f, 0.2f); glVertex3f(1.8f, 0.2f, 0.2f); glVertex3f(1.8f, 0.2f, 0.6f);
+        glVertex3f(0.6f, 0.5f, 0.2f); glVertex3f(0.6f, 0.2f, 0.2f); glVertex3f(1.8f, 0.2f, 0.2f); glVertex3f(1.8f, 0.5f, 0.2f);
 
-        // --- ENTER WINDOW ---
-        glColor3f(0.3, 0.3, 0.3);
-        glVertex3f(0.77, 0.63, 0.2); glVertex3f(0.75, 0.5, 0.2); glVertex3f(1.2, 0.5, 0.2); glVertex3f(1.22, 0.63, 0.2);
-        glVertex3f(1.27, 0.63, 0.2); glVertex3f(1.25, 0.5, 0.2); glVertex3f(1.65, 0.5, 0.2); glVertex3f(1.67, 0.63, 0.2);
-
-        glColor3f(r, g, b);
-        glVertex3f(0.7, 0.65, 0.2); glVertex3f(0.7, 0.5, 0.2); glVertex3f(0.75, 0.5, 0.2); glVertex3f(0.77, 0.65, 0.2);
-        glVertex3f(1.2, 0.65, 0.2); glVertex3f(1.2, 0.5, 0.2); glVertex3f(1.25, 0.5, 0.2); glVertex3f(1.27, 0.65, 0.2);
-        glVertex3f(1.65, 0.65, 0.2); glVertex3f(1.65, 0.5, 0.2); glVertex3f(1.7, 0.5, 0.2); glVertex3f(1.7, 0.65, 0.2);
-        glVertex3f(0.75, 0.65, 0.2); glVertex3f(0.75, 0.63, 0.2); glVertex3f(1.7, 0.63, 0.2); glVertex3f(1.7, 0.65, 0.2);
-        glVertex3f(0.75, 0.65, 0.6); glVertex3f(0.75, 0.63, 0.6); glVertex3f(1.7, 0.63, 0.6); glVertex3f(1.7, 0.65, 0.6);
-
-        glColor3f(0.3, 0.3, 0.3);
-        glVertex3f(0.77, 0.63, 0.6); glVertex3f(0.75, 0.5, 0.6); glVertex3f(1.2, 0.5, 0.6); glVertex3f(1.22, 0.63, 0.6);
-        glVertex3f(1.27, 0.63, 0.6); glVertex3f(1.25, 0.5, 0.6); glVertex3f(1.65, 0.5, 0.6); glVertex3f(1.67, 0.63, 0.6);
-
-        glColor3f(r, g, b);
-        glVertex3f(0.7, 0.65, 0.6); glVertex3f(0.7, 0.5, 0.6); glVertex3f(0.75, 0.5, 0.6); glVertex3f(0.77, 0.65, 0.6);
-        glVertex3f(1.2, 0.65, 0.6); glVertex3f(1.2, 0.5, 0.6); glVertex3f(1.25, 0.5, 0.6); glVertex3f(1.27, 0.65, 0.6);
-        glVertex3f(1.65, 0.65, 0.6); glVertex3f(1.65, 0.5, 0.6); glVertex3f(1.7, 0.5, 0.6); glVertex3f(1.7, 0.65, 0.6);
-
-        glColor3f(0.3, 0.3, 0.3);
-        glVertex3f(0.6, 0.5, 0.6); glVertex3f(0.6, 0.5, 0.2); glVertex3f(0.7, 0.65, 0.2); glVertex3f(0.7, 0.65, 0.6);
-        glVertex3f(1.7, 0.65, 0.6); glVertex3f(1.7, 0.65, 0.2); glVertex3f(1.8, 0.5, 0.2); glVertex3f(1.8, 0.5, 0.6);
+        glVertex3f(0.7f, 0.65f, 0.2f); glVertex3f(0.7f, 0.5f, 0.2f); glVertex3f(0.75f, 0.5f, 0.2f); glVertex3f(0.77f, 0.65f, 0.2f);
+        glVertex3f(1.2f, 0.65f, 0.2f); glVertex3f(1.2f, 0.5f, 0.2f); glVertex3f(1.25f, 0.5f, 0.2f); glVertex3f(1.27f, 0.65f, 0.2f);
+        glVertex3f(1.65f, 0.65f, 0.2f); glVertex3f(1.65f, 0.5f, 0.2f); glVertex3f(1.7f, 0.5f, 0.2f); glVertex3f(1.7f, 0.65f, 0.2f);
+        glVertex3f(0.75f, 0.65f, 0.2f); glVertex3f(0.75f, 0.63f, 0.2f); glVertex3f(1.7f, 0.63f, 0.2f); glVertex3f(1.7f, 0.65f, 0.2f);
+        glVertex3f(0.75f, 0.65f, 0.6f); glVertex3f(0.75f, 0.63f, 0.6f); glVertex3f(1.7f, 0.63f, 0.6f); glVertex3f(1.7f, 0.65f, 0.6f);
         glEnd();
 
         // ==========================================
-        // 2. DETALE (TRÓJK¥TY)
+        // 2. SZYBY SAMOCHODU
         // ==========================================
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        GLfloat glass_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+        GLfloat glass_shininess[] = { 120.0f };
+        glMaterialfv(GL_FRONT, GL_SPECULAR, glass_specular);
+        glMaterialfv(GL_FRONT, GL_SHININESS, glass_shininess);
+        glColor4f(0.5f, 0.8f, 1.0f, 0.4f);
+
+        glBegin(GL_QUADS);
+        glVertex3f(0.77f, 0.63f, 0.2f); glVertex3f(0.75f, 0.5f, 0.2f); glVertex3f(1.2f, 0.5f, 0.2f); glVertex3f(1.22f, 0.63f, 0.2f);
+        glVertex3f(1.27f, 0.63f, 0.2f); glVertex3f(1.25f, 0.5f, 0.2f); glVertex3f(1.65f, 0.5f, 0.2f); glVertex3f(1.67f, 0.63f, 0.2f);
+        glVertex3f(0.77f, 0.63f, 0.6f); glVertex3f(0.75f, 0.5f, 0.6f); glVertex3f(1.2f, 0.5f, 0.6f); glVertex3f(1.22f, 0.63f, 0.6f);
+        glVertex3f(1.27f, 0.63f, 0.6f); glVertex3f(1.25f, 0.5f, 0.6f); glVertex3f(1.65f, 0.5f, 0.6f); glVertex3f(1.67f, 0.63f, 0.6f);
+        glVertex3f(0.6f, 0.5f, 0.6f); glVertex3f(0.6f, 0.5f, 0.2f); glVertex3f(0.7f, 0.65f, 0.2f); glVertex3f(0.7f, 0.65f, 0.6f);
+        glVertex3f(1.7f, 0.65f, 0.6f); glVertex3f(1.7f, 0.65f, 0.2f); glVertex3f(1.8f, 0.5f, 0.2f); glVertex3f(1.8f, 0.5f, 0.6f);
+        glEnd();
+
         glBegin(GL_TRIANGLES);
-        glColor3f(0.3, 0.3, 0.3);
-
-        glVertex3f(0.6, 0.5, 0.6); glVertex3f(0.7, 0.65, 0.6); glVertex3f(0.7, 0.5, 0.6);
-        glVertex3f(0.6, 0.5, 0.2); glVertex3f(0.7, 0.65, 0.2); glVertex3f(0.7, 0.5, 0.2);
-        glVertex3f(1.7, 0.65, 0.2); glVertex3f(1.8, 0.5, 0.2); glVertex3f(1.7, 0.5, 0.2);
-        glVertex3f(1.7, 0.65, 0.6); glVertex3f(1.8, 0.5, 0.6); glVertex3f(1.7, 0.5, 0.6);
+        glVertex3f(0.6f, 0.5f, 0.6f); glVertex3f(0.7f, 0.65f, 0.6f); glVertex3f(0.7f, 0.5f, 0.6f);
+        glVertex3f(0.6f, 0.5f, 0.2f); glVertex3f(0.7f, 0.65f, 0.2f); glVertex3f(0.7f, 0.5f, 0.2f);
+        glVertex3f(1.7f, 0.65f, 0.2f); glVertex3f(1.8f, 0.5f, 0.2f); glVertex3f(1.7f, 0.5f, 0.2f);
+        glVertex3f(1.7f, 0.65f, 0.6f); glVertex3f(1.8f, 0.5f, 0.6f); glVertex3f(1.7f, 0.5f, 0.6f);
         glEnd();
+        glDisable(GL_BLEND);
+
+        glMaterialfv(GL_FRONT, GL_SPECULAR, body_specular);
+        glMaterialfv(GL_FRONT, GL_SHININESS, body_shininess);
 
         // ==========================================
-        // 3. SYSTEM ZAP£ONU (Rura z ty³u)
+        // 3. MATRYCA ŒWIATE£ (SAMES ¯ARÓWKI - EMISSION)
+        // ==========================================
+        GLfloat noGlow[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+        // --- G£ÓWNE REFLEKTORY PRZÓD (Czyste, jasne ksenony) ---
+        GLfloat glowLight[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+        glMaterialfv(GL_FRONT, GL_EMISSION, glowLight);
+        glColor3f(1.0f, 1.0f, 1.0f);
+        glBegin(GL_QUADS);
+        glVertex3f(0.199f, 0.35f, 0.25f); glVertex3f(0.199f, 0.35f, 0.33f); glVertex3f(0.199f, 0.27f, 0.33f); glVertex3f(0.199f, 0.27f, 0.25f);
+        glVertex3f(0.199f, 0.35f, 0.47f); glVertex3f(0.199f, 0.35f, 0.55f); glVertex3f(0.199f, 0.27f, 0.55f); glVertex3f(0.199f, 0.27f, 0.47f);
+        glEnd();
+
+        // --- TYLNE LAMPY STOPU (Czyste czerwone klosze) ---
+        GLfloat rearGlowLight[] = { 1.0f, 0.0f, 0.0f, 1.0f };
+        glMaterialfv(GL_FRONT, GL_EMISSION, rearGlowLight);
+        glColor3f(1.0f, 0.1f, 0.1f);
+        glBegin(GL_QUADS);
+        glVertex3f(2.101f, 0.35f, 0.25f); glVertex3f(2.101f, 0.35f, 0.33f); glVertex3f(2.101f, 0.27f, 0.33f); glVertex3f(2.101f, 0.27f, 0.25f);
+        glVertex3f(2.101f, 0.35f, 0.47f); glVertex3f(2.101f, 0.35f, 0.55f); glVertex3f(2.101f, 0.27f, 0.55f); glVertex3f(2.101f, 0.27f, 0.47f);
+        glEnd();
+
+        // --- KIERUNKOWSKAZY (Miganie na krawêdziach zderzaków) ---
+        bool flashOn = ((int)(wheelAngle / 20.0f) % 2) == 0;
+        bool showLeft = flashOn && (indicatorMode == 1 || indicatorMode == 3);
+        bool showRight = flashOn && (indicatorMode == 2 || indicatorMode == 3);
+
+        GLfloat orangeGlow[] = { 1.0f, 0.5f, 0.0f, 1.0f };
+
+        // Lewa strona
+        if (showLeft) {
+            glMaterialfv(GL_FRONT, GL_EMISSION, orangeGlow);
+            glColor3f(1.0f, 0.5f, 0.0f);
+            glBegin(GL_QUADS);
+            glVertex3f(0.198f, 0.34f, 0.20f); glVertex3f(0.198f, 0.34f, 0.24f); glVertex3f(0.198f, 0.28f, 0.24f); glVertex3f(0.198f, 0.28f, 0.20f);
+            glVertex3f(2.102f, 0.34f, 0.20f); glVertex3f(2.102f, 0.34f, 0.24f); glVertex3f(2.102f, 0.28f, 0.24f); glVertex3f(2.102f, 0.28f, 0.20f);
+            glEnd();
+        }
+
+        // Prawa strona
+        if (showRight) {
+            glMaterialfv(GL_FRONT, GL_EMISSION, orangeGlow);
+            glColor3f(1.0f, 0.5f, 0.0f);
+            glBegin(GL_QUADS);
+            glVertex3f(0.198f, 0.34f, 0.56f); glVertex3f(0.198f, 0.34f, 0.59f); glVertex3f(0.198f, 0.28f, 0.59f); glVertex3f(0.198f, 0.28f, 0.56f);
+            glVertex3f(2.102f, 0.34f, 0.56f); glVertex3f(2.102f, 0.34f, 0.59f); glVertex3f(2.102f, 0.28f, 0.59f); glVertex3f(2.102f, 0.28f, 0.56f);
+            glEnd();
+        }
+
+        glMaterialfv(GL_FRONT, GL_EMISSION, noGlow);
+
+        // ==========================================
+        // 4. SYSTEM ZAP£ONU (Rura z ty³u)
         // ==========================================
         glPushMatrix();
-        glColor3f(0.3, 0.3, 0.7);
-        glTranslatef(1.65, 0.2, 0.3);
-        glRotatef(90.0, 0, 1, 0);
-        drawExhaust(0.02f, 0.03f, 0.5f); // Nowa funkcja bez glu!
+        glColor3f(0.4f, 0.4f, 0.4f);
+        glTranslatef(1.65f, 0.2f, 0.3f);
+        glRotatef(90.0f, 0, 1, 0);
+        drawExhaust(0.02f, 0.03f, 0.5f);
+        getLog();
         glPopMatrix();
 
         // ==========================================
-        // 4. KO£A (WHEELS)
+        // 5. KO£A (WHEELS)
         // ==========================================
-        glColor3f(0.7, 0.7, 0.7);
+        glColor3f(0.7f, 0.7f, 0.7f);
         glPushMatrix();
-
         float theta;
 
-        // Szprychy ko³a 1
         glBegin(GL_LINE_STRIP);
         for (theta = 0; theta < 360; theta = theta + 40) {
-            glVertex3f(0.6, 0.2, 0.62);
-            glVertex3f(0.6 + (0.08 * (cos(((theta + wheelAngle) * 3.14) / 180))), 0.2 + (0.08 * (sin(((theta + wheelAngle) * 3.14) / 180))), 0.62);
+            glVertex3f(0.6f, 0.2f, 0.62f);
+            glVertex3f(0.6f + (0.08f * (cos(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.2f + (0.08f * (sin(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.62f);
         }
         glEnd();
 
-        // Szprychy ko³a 2
         glBegin(GL_LINE_STRIP);
         for (theta = 0; theta < 360; theta = theta + 40) {
-            glVertex3f(0.6, 0.2, 0.18);
-            glVertex3f(0.6 + (0.08 * (cos(((theta + wheelAngle) * 3.14) / 180))), 0.2 + (0.08 * (sin(((theta + wheelAngle) * 3.14) / 180))), 0.18);
+            glVertex3f(0.6f, 0.2f, 0.18f);
+            glVertex3f(0.6f + (0.08f * (cos(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.2f + (0.08f * (sin(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.18f);
         }
         glEnd();
 
-        // Szprychy ko³a 3
         glBegin(GL_LINE_STRIP);
         for (theta = 0; theta < 360; theta = theta + 40) {
-            glVertex3f(1.7, 0.2, 0.18);
-            glVertex3f(1.7 + (0.08 * (cos(((theta + wheelAngle) * 3.14) / 180))), 0.2 + (0.08 * (sin(((theta + wheelAngle) * 3.14) / 180))), 0.18);
+            glVertex3f(1.7f, 0.2f, 0.18f);
+            glVertex3f(1.7f + (0.08f * (cos(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.2f + (0.08f * (sin(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.18f);
         }
         glEnd();
 
-        // Szprychy ko³a 4
         glBegin(GL_LINE_STRIP);
         for (theta = 0; theta < 360; theta = theta + 40) {
-            glVertex3f(1.7, 0.2, 0.62);
-            glVertex3f(1.7 + (0.08 * (cos(((theta + wheelAngle) * 3.14) / 180))), 0.2 + (0.08 * (sin(((theta + wheelAngle) * 3.14) / 180))), 0.62);
+            glVertex3f(1.7f, 0.2f, 0.62f);
+            glVertex3f(1.7f + (0.08f * (cos(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.2f + (0.08f * (sin(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.62f);
         }
         glEnd();
 
-        // Opony - Narysowane rêcznie bez GLUTa!
-        glPushMatrix();
-        glTranslatef(0.6, 0.2, 0.6);
-        drawTire(0.09f, 0.05f);
+        glPushMatrix(); glTranslatef(0.6f, 0.2f, 0.6f); drawTire(0.09f, 0.05f); glPopMatrix();
+        glPushMatrix(); glTranslatef(0.6f, 0.2f, 0.2f); drawTire(0.09f, 0.05f); glPopMatrix();
+        glPushMatrix(); glTranslatef(1.7f, 0.2f, 0.2f); drawTire(0.09f, 0.05f); glPopMatrix();
+        glPushMatrix(); glTranslatef(1.7f, 0.2f, 0.6f); drawTire(0.09f, 0.05f); glPopMatrix();
         glPopMatrix();
-
-        glPushMatrix();
-        glTranslatef(0.6, 0.2, 0.2);
-        drawTire(0.09f, 0.05f);
-        glPopMatrix();
-
-        glPushMatrix();
-        glTranslatef(1.7, 0.2, 0.2);
-        drawTire(0.09f, 0.05f);
-        glPopMatrix();
-
-        glPushMatrix();
-        glTranslatef(1.7, 0.2, 0.6);
-        drawTire(0.09f, 0.05f);
-        glPopMatrix();
-
-        glPopMatrix(); // Koniec transformacji kó³
     }
 
-    // Klasyczna funkcja draw - najpierw przesuwa auto na pozycje X,Y,Z, a potem wywo³uje model
     void draw() {
         glPushMatrix();
         glTranslatef(x, y, z);
         draw_model_only();
         glPopMatrix();
     }
+
+private:
+    void getLog() {}
 };
 
 #endif // CAR_H

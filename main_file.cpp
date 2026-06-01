@@ -99,18 +99,26 @@ void error_callback(int error, const char* description) {
 }
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-	if (action == GLFW_PRESS) {
-		if (key == GLFW_KEY_LEFT) speed_x = -PI / 2;
-		if (key == GLFW_KEY_RIGHT) speed_x = PI / 2;
-		if (key == GLFW_KEY_UP) speed_y = PI / 2;
-		if (key == GLFW_KEY_DOWN) speed_y = -PI / 2;
-	}
-	if (action == GLFW_RELEASE) {
-		if (key == GLFW_KEY_LEFT) speed_x = 0;
-		if (key == GLFW_KEY_RIGHT) speed_x = 0;
-		if (key == GLFW_KEY_UP) speed_y = 0;
-		if (key == GLFW_KEY_DOWN) speed_y = 0;
-	}
+    if (action == GLFW_PRESS) {
+        // Sterowanie ruchem
+        if (key == GLFW_KEY_LEFT) speed_x = -PI / 2;
+        if (key == GLFW_KEY_RIGHT) speed_x = PI / 2;
+        if (key == GLFW_KEY_UP) speed_y = PI / 2;
+        if (key == GLFW_KEY_DOWN) speed_y = -PI / 2;
+
+        // ========================================================
+        // NOWOŚĆ: STEROWANIE KIERUNKOWSKAZAMI (A, D, S)
+        // ========================================================
+        if (key == GLFW_KEY_D) autoGracza.toggleLeftIndicator();
+        if (key == GLFW_KEY_A) autoGracza.toggleRightIndicator();
+        if (key == GLFW_KEY_S) autoGracza.toggleHazardLights();
+    }
+    if (action == GLFW_RELEASE) {
+        if (key == GLFW_KEY_LEFT) speed_x = 0;
+        if (key == GLFW_KEY_RIGHT) speed_x = 0;
+        if (key == GLFW_KEY_UP) speed_y = 0;
+        if (key == GLFW_KEY_DOWN) speed_y = 0;
+    }
 }
 
 void windowResizeCallback(GLFWwindow* window, int width, int height) {
