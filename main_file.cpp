@@ -1,45 +1,6 @@
-/*
-Niniejszy program jest wolnym oprogramowaniem; możesz go
-rozprowadzać dalej i / lub modyfikować na warunkach Powszechnej
-Licencji Publicznej GNU, wydanej przez Fundację Wolnego
-Oprogramowania - według wersji 2 tej Licencji lub(według twojego
-wyboru) którejś z późniejszych wersji.
-
-Niniejszy program rozpowszechniany jest z nadzieją, iż będzie on
-użyteczny - jednak BEZ JAKIEJKOLWIEK GWARANCJI, nawet domyślnej
-gwarancji PRZYDATNOŚCI HANDLOWEJ albo PRZYDATNOŚCI DO OKREŚLONYCH
-ZASTOSOWAŃ.W celu uzyskania bliższych informacji sięgnij do
-Powszechnej Licencji Publicznej GNU.
-
-Z pewnością wraz z niniejszym programem otrzymałeś też egzemplarz
-Powszechnej Licencji Publicznej GNU(GNU General Public License);
-jeśli nie - napisz do Free Software Foundation, Inc., 59 Temple
-Place, Fifth Floor, Boston, MA  02110 - 1301  USA
-*/
-
-/*
-Niniejszy program jest wolnym oprogramowaniem; możesz go
-rozprowadzzać dalej i / lub modyfikować na warunkach Powszechnej
-Licencji Publicznej GNU, wydanej przez Fundację Wolnego
-Oprogramowania - według wersji 2 tej Licencji lub(według twojego
-wyboru) którejś z późniejszych wersji.
-
-Niniejszy program rozpowszechniany jest z nadzieją, iż będzie on
-użyteczny - jednak BEZ JAKIEJKOLWIEK GWARANCJI, nawet domyślnej
-gwarancji PRZYDATNOŚCI HANDLOWEJ albo PRZYDATNOŚCI DO OKREŚLONYCH
-ZASTOSOWAŃ.W celu uzyskania bliższych informacji sięgnij do
-Powszechnej Licencji Publicznej GNU.
-
-Z pewnością wraz z niniejszym programem otrzymałeś też egzemplarz
-Powszechnej Licencji Publicznej GNU(GNU General Public License);
-jeśli nie - napisz do Free Software Foundation, Inc., 59 Temple
-Place, Fifth Floor, Boston, MA  02110 - 1301  USA
-*/
-
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_SWIZZLE
-
-#define GLEW_STATIC  // To musi być PIERWSZE
+#define GLEW_STATIC  
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -54,23 +15,18 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include "myCube.h"
 #include "myTeapot.h"
 #include "map_geometry.h"
-
 #include "city_map.h"
 #include "Car.h"
 #include "samochodyOBJ.h"
-
 #include <windows.h>
 #include <mmsystem.h>
 #pragma comment(lib, "winmm.lib")
-
-
 #pragma comment(lib, "glew32s.lib")
 #pragma comment(lib, "glfw3.lib")
 #pragma comment(lib, "opengl32.lib")
 
-ShaderProgram* spMap; // Nowy wskaźnik na Twoje shadery
-float dist = 0.0f;    // Zmienna przejechanego dystansu
-
+ShaderProgram* spMap; 
+float dist = 0.0f;    
 float speed_x = 0;
 float speed_y = 0;
 float aspectRatio = 1;
@@ -83,13 +39,7 @@ float spawnTimer = 0.0f;
 
 ObjModel modelSamochodu;
 
-float* vertices = myCubeVertices;
-float* normals = myCubeNormals;
-float* texCoords = myCubeTexCoords;
-float* colors = myCubeColors;
-int vertexCount = myCubeVertexCount;
-
-extern GLuint texAsphalt; // Ta zmienna pozwoli przekazać teksturę do city_map.h
+extern GLuint texAsphalt; 
 extern GLuint texBuilding;
 extern GLuint texGrass;
 
@@ -100,15 +50,11 @@ void error_callback(int error, const char* description) {
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (action == GLFW_PRESS) {
-        // Sterowanie ruchem
         if (key == GLFW_KEY_LEFT) speed_x = -PI / 2;
         if (key == GLFW_KEY_RIGHT) speed_x = PI / 2;
         if (key == GLFW_KEY_UP) speed_y = PI / 2;
         if (key == GLFW_KEY_DOWN) speed_y = -PI / 2;
 
-        // ========================================================
-        // NOWOŚĆ: STEROWANIE KIERUNKOWSKAZAMI (A, D, S)
-        // ========================================================
         if (key == GLFW_KEY_D) autoGracza.toggleLeftIndicator();
         if (key == GLFW_KEY_A) autoGracza.toggleRightIndicator();
         if (key == GLFW_KEY_S) autoGracza.toggleHazardLights();
@@ -132,7 +78,6 @@ GLuint readTexture(const char* filename) {
 	glGenTextures(1, &tex);
 	glBindTexture(GL_TEXTURE_2D, tex);
 
-	// Parametry filtrowania
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -152,7 +97,6 @@ GLuint readTexture(const char* filename) {
 	return tex;
 }
 
-//Procedura inicjująca
 void initOpenGLProgram(GLFWwindow* window) {
 	glClearColor(0.15f, 0.25f, 0.45f, 1.0f);
 	glEnable(GL_DEPTH_TEST);
@@ -163,12 +107,9 @@ void initOpenGLProgram(GLFWwindow* window) {
 	spMap = new ShaderProgram("v_map.glsl", NULL, "f_map.glsl");
 
 	if (!modelSamochodu.load("Car.obj")) {
-		// Obsługa błędu
+		printf("UWAGA: Model nie zostal wczytany!\n");
 	}
 
-	// ==========================================
-	// KONFIGURACJA ŚWIATŁA SŁONECZNEGO (GL_LIGHT0)
-	// ==========================================
 	GLfloat light_position[] = { 10.0f, 20.0f, 10.0f, 0.0f };
 
 	GLfloat light_ambient[] = { 0.3f, 0.3f, 0.3f, 1.0f };
@@ -182,16 +123,13 @@ void initOpenGLProgram(GLFWwindow* window) {
 
 	glShadeModel(GL_SMOOTH);
 
-	// Wczytujemy poprawnie teksturę chodnika
 	texChodnik = readTexture("chodnik2.png");
-	// Ładowanie Twojej tekstury ziarnistości asfaltu
-// (Zastąp "twoja_nazwa_pliku.jpg" dokładną nazwą pobranego obrazka)
 	texAsphalt = readTexture("asfalt.png");
 	texBuilding = readTexture("kamienica.png");
 	texGrass = readTexture("trawa.png");
 
 	if (texChodnik == 0) {
-		printf("UWAGA: Tekstura nie zostala wczytana! Sprawdz plik chodnik.png\n");
+		printf("UWAGA: Tekstura nie zostala wczytana!\n");
 	}
 
 	glBindTexture(GL_TEXTURE_2D, texChodnik);
@@ -199,8 +137,6 @@ void initOpenGLProgram(GLFWwindow* window) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 }
 
-
-//Zwolnienie zasobów zajętych przez program
 void freeOpenGLProgram(GLFWwindow* window) {
 	delete sp;
 	delete spMap;
@@ -209,24 +145,19 @@ void freeOpenGLProgram(GLFWwindow* window) {
 void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// ---> BEZPIECZNY RESET STANÓW DLA MAPY MIASTA <---
-	// Wyłączamy oświetlenie stałego potoku, aby nie psuło shaderów mapy i asfaltu
 	glDisable(GL_LIGHTING);
 	glDisable(GL_LIGHT0);
 	glDisable(GL_COLOR_MATERIAL);
 	glDisable(GL_NORMALIZE);
 
-	// Kamera patrzy z (0, 3, -10) na (0, 0, 10)
 	glm::mat4 V = glm::lookAt(glm::vec3(0, 3, -10), glm::vec3(0, 0, 10), glm::vec3(0, 1, 0));
 	glm::mat4 P = glm::perspective(50.0f * PI / 180.0f, aspectRatio, 0.01f, 200.0f);
 
-	// 1. RYSOWANIE MAPY
 	spMap->use();
 	glUniformMatrix4fv(spMap->u("P"), 1, false, glm::value_ptr(P));
 	glUniformMatrix4fv(spMap->u("V"), 1, false, glm::value_ptr(V));
 	renderCity(spMap, dist);
 
-	// 2. RYSOWANIE SAMOCHODU GRACZA
 	glUseProgram(0);
 
 	glMatrixMode(GL_PROJECTION);
@@ -265,8 +196,7 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	glDisable(GL_LIGHTING);
 	glPopMatrix();
 
-	// 3. RYSOWANIE AUT NPC
-	for (size_t i = 0; i < inneAuta.size(); i++) {
+	for (int i = 0; i < inneAuta.size(); i++) {
 		glPushMatrix();
 
 		glTranslatef(inneAuta[i].x, inneAuta[i].y, inneAuta[i].z);
@@ -286,37 +216,31 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 		modelSamochodu.draw(inneAuta[i].colorR, inneAuta[i].colorG, inneAuta[i].colorB);
 
 		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE); // Tryb mieszania potęgujący jasność asfaltu
-		glDisable(GL_LIGHTING);            // Wyłączamy cienie, aby snop światła był jasny
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE); 
+		glDisable(GL_LIGHTING);           
 
 		glBegin(GL_QUADS);
 
-		// Ponieważ auto NPC leży na wysokości Y = 0.5f, wartość -0.388f 
-		// idealnie kładzie poświatę na asfalcie (0.5 - 0.388 = 0.112f)
 		float npcRoadY = -0.388f;
 
-		// KROK A: Początek snopu światła (przy zderzaku) - jasny, lekko żółtawy (Alpha = 0.45f)
 		glColor4f(1.0f, 1.0f, 0.8f, 0.45f);
-		glVertex3f(-0.9f, npcRoadY, 1.2f); // Lewy reflektor NPC
-		glVertex3f(0.9f, npcRoadY, 1.2f); // Prawy reflektor NPC
+		glVertex3f(-0.9f, npcRoadY, 1.2f); 
+		glVertex3f(0.9f, npcRoadY, 1.2f); 
 
-		// KROK B: Koniec snopu światła (w oddali) - rozszerza się i zanika (Alpha = 0.0f)
 		glColor4f(1.0f, 1.0f, 0.8f, 0.0f);
-		glVertex3f(3.0f, npcRoadY, 12.0f); // Szeroko po prawej stronie drogi w dali
-		glVertex3f(-3.0f, npcRoadY, 12.0f); // Szeroko po lewej stronie drogi w dali
+		glVertex3f(3.0f, npcRoadY, 12.0f); 
+		glVertex3f(-3.0f, npcRoadY, 12.0f);
 
 		glEnd();
 
 		glEnable(GL_LIGHTING);
 		glDisable(GL_BLEND);
-		// ========================================================
 
 		glDisable(GL_NORMALIZE);
 		glPopMatrix();
 	}
 	glfwSwapBuffers(window);
 }
-
 
 int main(void)
 {
@@ -351,7 +275,6 @@ int main(void)
 
 	glfwSetTime(0);
 
-	// Odtwarzanie w tle (ASYNC) i automatyczne zapętlenie utworu (LOOP)
 	PlaySound(TEXT("muzyka.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_LOOP);
 
 	while (!glfwWindowShouldClose(window)) {
@@ -364,7 +287,6 @@ int main(void)
 		autoGracza.z += speed_y * deltaTime * 5.0f;
 		autoGracza.wheelAngle += 200.0f * deltaTime;
 
-		// 1. Odliczanie czasu i pojawianie się nowych aut
 		spawnTimer += deltaTime;
 		if (spawnTimer > 3.5f) {
 			float lewyPas = -3.0f;
@@ -372,43 +294,35 @@ int main(void)
 
 			float laneX = (rand() % 100 < 50) ? lewyPas : prawyPas;
 
-			// 1. Tworzymy tymczasowy obiekt samochodu
 			Car npc(laneX, 0.5f, 40.0f);
 
-			// 2. Definiujemy paletę 6 fajnych, żywych kolorów (RGB)
 			float paletaBarw[6][3] = {
-				{0.0f, 0.8f, 0.2f}, // 0: Zielony
-				{0.1f, 0.5f, 1.0f}, // 1: Niebieski
-				{1.0f, 0.4f, 0.7f}, // 2: Różowy
-				{1.0f, 0.8f, 0.0f}, // 3: Żółty
-				{0.9f, 0.1f, 0.1f}, // 4: Czerwony
-				{1.0f, 0.5f, 0.0f}  // 5: Pomarańczowy
+				{0.0f, 0.8f, 0.2f},
+				{0.1f, 0.5f, 1.0f}, 
+				{1.0f, 0.4f, 0.7f}, 
+				{1.0f, 0.8f, 0.0f}, 
+				{0.9f, 0.1f, 0.1f}, 
+				{1.0f, 0.5f, 0.0f} 
 			};
 
-			// 3. Losujemy indeks od 0 do 5 z naszej palety
 			int losowyIndeks = rand() % 6;
 
-			// 4. Przypisujemy wylosowane kolory do tego konkretnego auta
 			npc.colorR = paletaBarw[losowyIndeks][0];
 			npc.colorG = paletaBarw[losowyIndeks][1];
 			npc.colorB = paletaBarw[losowyIndeks][2];
 
-			// 5. Wrzucamy w pełni pokolorowane auto do wektora ruchu ulicznego
 			inneAuta.push_back(npc);
 
 			spawnTimer = 0.0f;
 		}
 
 		for (int i = 0; i < inneAuta.size(); i++) {
-
-			// KLUCZ: Odejmujemy od Z, żeby auta poruszały się z Z=40 w stronę kamery (Z=-10)
 			inneAuta[i].z -= 25.0f * deltaTime;
-			inneAuta[i].wheelAngle -= 200.0f * deltaTime; // Koła kręcą się do przodu (w naszym kierunku)
+			inneAuta[i].wheelAngle -= 200.0f * deltaTime; 
 
-			// Gdy auto minie gracza i przejedzie za kamerę (Z stanie się mniejsze niż -10), usuwamy je
 			if (inneAuta[i].z < -10.0f) {
 				inneAuta.erase(inneAuta.begin() + i);
-				i--; // Cofamy indeks, żeby nie pominąć kolejnego auta w wektorze
+				i--; 
 			}
 		}
 
