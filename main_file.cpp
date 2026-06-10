@@ -285,6 +285,13 @@ int main(void)
 
 		autoGracza.x -= speed_x * deltaTime * 5.0f;
 		autoGracza.z += speed_y * deltaTime * 5.0f;
+
+		if (autoGracza.x < -4.0f) autoGracza.x = -4.0f;
+		if (autoGracza.x > 3.5f)  autoGracza.x = 3.5f;
+
+		if (autoGracza.z < -6.0f) autoGracza.z = -6.0f;
+		if (autoGracza.z > 5.0f)  autoGracza.z = 5.0f;
+
 		autoGracza.wheelAngle += 200.0f * deltaTime;
 
 		spawnTimer += deltaTime;
