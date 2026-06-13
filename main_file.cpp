@@ -43,6 +43,8 @@ extern GLuint texAsphalt;
 extern GLuint texBuilding;
 extern GLuint texGrass;
 
+bool isCrashed = false;
+
 //Procedura obsługi błędów
 void error_callback(int error, const char* description) {
 	fputs(description, stderr);
@@ -58,6 +60,14 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         if (key == GLFW_KEY_D) autoGracza.toggleLeftIndicator();
         if (key == GLFW_KEY_A) autoGracza.toggleRightIndicator();
         if (key == GLFW_KEY_S) autoGracza.toggleHazardLights();
+
+		if (key == GLFW_KEY_SPACE && isCrashed) {
+			isCrashed = false;
+			glClearColor(0.15f, 0.25f, 0.45f, 1.0f); // Powrót do standardowego koloru nieba
+			autoGracza.indicatorMode = 0; // Wyłączamy światła awaryjne
+			inneAuta.clear(); // Usuwamy auta NPC z mapy, żeby mieć czystą drogę na start
+			spawnTimer = 0.0f; // Zerujemy timer pojawiania się nowych aut
+		}
     }
     if (action == GLFW_RELEASE) {
         if (key == GLFW_KEY_LEFT) speed_x = 0;
@@ -203,7 +213,7 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 		glRotatef(180.0f, 0.0f, 1.0f, 0.0f);
 
 		glScalef(1.0f, 1.0f, 1.0f);
-		glTranslatef(-1.0f, 0.0f, -0.4f);
+		//glTranslatef(-1.0f, 0.0f, -0.4f);
 
 		glEnable(GL_LIGHTING);
 		glEnable(GL_LIGHT0);
@@ -240,6 +250,49 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 		glPopMatrix();
 	}
 	glfwSwapBuffers(window);
+}
+
+/*bool checkCollision(Car& player, std::vector<Car>& npcs) {
+	float playerRadiusX = 0.45f;  //2.0 //0.45
+	float playerRadiusZ = 3.5f;  //0.6 //2.1
+
+	float npcRadiusX = 1.35f; //1.3 //1.35
+	float npcRadiusZ = 4.2f; //2.4 //2.7
+
+	for (int i = 0; i < npcs.size(); i++) {
+		float diffX = abs(player.x - npcs[i].x);
+		float diffZ = abs(player.z - npcs[i].z);
+
+		if (diffX < (playerRadiusX + npcRadiusX) &&
+			diffZ < (playerRadiusZ + npcRadiusZ)) {
+			return true; 
+		}
+	}
+	return false;
+}*/
+
+bool checkCollision(Car& player, std::vector<Car>& npcs) {
+	float playerMinX = player.x - 0.45f;
+	float playerMaxX = player.x + 0.45f;
+
+	float playerMinZ = player.z - 2.0f; 
+	float playerMaxZ = player.z + 4.0f;
+
+	for (int i = 0; i < npcs.size(); i++) {
+		float npcMinX = npcs[i].x - 2.0f;
+		float npcMaxX = npcs[i].x + 2.0;
+
+		float npcMinZ = npcs[i].z - 4.0f;
+		float npcMaxZ = npcs[i].z + 1.5f; 
+
+		bool collisionX = (playerMinX <= npcMaxX) && (playerMaxX >= npcMinX);
+		bool collisionZ = (playerMinZ <= npcMaxZ) && (playerMaxZ >= npcMinZ);
+
+		if (collisionX && collisionZ) {
+			return true;
+		}
+	}
+	return false;
 }
 
 int main(void)
@@ -281,60 +334,69 @@ int main(void)
 		float deltaTime = glfwGetTime();
 		glfwSetTime(0);
 
-		dist += 10.0f * deltaTime;
+		if (!isCrashed) {
+			dist += 10.0f * deltaTime;
 
-		autoGracza.x -= speed_x * deltaTime * 5.0f;
-		autoGracza.z += speed_y * deltaTime * 5.0f;
+			autoGracza.x -= speed_x * deltaTime * 5.0f;
+			autoGracza.z += speed_y * deltaTime * 5.0f;
 
-		if (autoGracza.x < -4.0f) autoGracza.x = -4.0f;
-		if (autoGracza.x > 3.5f)  autoGracza.x = 3.5f;
+			if (autoGracza.x < -4.0f) autoGracza.x = -4.0f;
+			if (autoGracza.x > 3.5f)  autoGracza.x = 3.5f;
 
-		if (autoGracza.z < -6.0f) autoGracza.z = -6.0f;
-		if (autoGracza.z > 5.0f)  autoGracza.z = 5.0f;
+			if (autoGracza.z < -6.0f) autoGracza.z = -6.0f;
+			if (autoGracza.z > 5.0f)  autoGracza.z = 5.0f;
 
-		autoGracza.wheelAngle += 200.0f * deltaTime;
+			autoGracza.wheelAngle += 200.0f * deltaTime;
 
-		spawnTimer += deltaTime;
-		if (spawnTimer > 3.5f) {
-			float lewyPas = -3.0f;
-			float prawyPas = 1.7f;
+			spawnTimer += deltaTime;
+			if (spawnTimer > 3.5f) {
+				float lewyPas = -3.0f;
+				float prawyPas = 3.0f;
 
-			float laneX = (rand() % 100 < 50) ? lewyPas : prawyPas;
+				float laneX = (rand() % 100 < 50) ? lewyPas : prawyPas;
 
-			Car npc(laneX, 0.5f, 40.0f);
+				Car npc(laneX, 0.5f, 40.0f);
 
-			float paletaBarw[6][3] = {
-				{0.0f, 0.8f, 0.2f},
-				{0.1f, 0.5f, 1.0f}, 
-				{1.0f, 0.4f, 0.7f}, 
-				{1.0f, 0.8f, 0.0f}, 
-				{0.9f, 0.1f, 0.1f}, 
-				{1.0f, 0.5f, 0.0f} 
-			};
+				float paletaBarw[6][3] = {
+					{0.0f, 0.8f, 0.2f},
+					{0.1f, 0.5f, 1.0f},
+					{1.0f, 0.4f, 0.7f},
+					{1.0f, 0.8f, 0.0f},
+					{0.9f, 0.1f, 0.1f},
+					{1.0f, 0.5f, 0.0f}
+				};
 
-			int losowyIndeks = rand() % 6;
+				int losowyIndeks = rand() % 6;
 
-			npc.colorR = paletaBarw[losowyIndeks][0];
-			npc.colorG = paletaBarw[losowyIndeks][1];
-			npc.colorB = paletaBarw[losowyIndeks][2];
+				npc.colorR = paletaBarw[losowyIndeks][0];
+				npc.colorG = paletaBarw[losowyIndeks][1];
+				npc.colorB = paletaBarw[losowyIndeks][2];
 
-			inneAuta.push_back(npc);
+				inneAuta.push_back(npc);
 
-			spawnTimer = 0.0f;
-		}
+				spawnTimer = 0.0f;
+			}
 
-		for (int i = 0; i < inneAuta.size(); i++) {
-			inneAuta[i].z -= 25.0f * deltaTime;
-			inneAuta[i].wheelAngle -= 200.0f * deltaTime; 
+			for (int i = 0; i < inneAuta.size(); i++) {
+				inneAuta[i].z -= 25.0f * deltaTime;
+				inneAuta[i].wheelAngle -= 200.0f * deltaTime;
 
-			if (inneAuta[i].z < -10.0f) {
-				inneAuta.erase(inneAuta.begin() + i);
-				i--; 
+				if (inneAuta[i].z < -10.0f) {
+					inneAuta.erase(inneAuta.begin() + i);
+					i--;
+				}
+			}
+
+			if (checkCollision(autoGracza, inneAuta)) {
+				isCrashed = true;
+				speed_x = 0;
+				speed_y = 0;
+				glClearColor(0.8f, 0.1f, 0.1f, 1.0f); 
+				autoGracza.indicatorMode = 3; 
 			}
 		}
 
 		drawScene(window, 0, 0);
-
 		glfwPollEvents();
 	}
 

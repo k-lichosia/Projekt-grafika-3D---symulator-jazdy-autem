@@ -3,6 +3,7 @@
 
 #include <GLFW/glfw3.h>
 #include <math.h>
+#include <time.h>
 
 class Car {
 private:
@@ -143,7 +144,8 @@ public:
         glMaterialfv(GL_FRONT, GL_SHININESS, body_shininess);
 
         // ZEGAR MIGANIE (Wyci¹gniêty wy¿ej, ¿eby nak³ada³ siê te¿ na poœwiatê pod³o¿a)
-        bool flashOn = ((int)(wheelAngle / 20.0f) % 2) == 0;
+        //bool flashOn = ((int)(wheelAngle / 20.0f) % 2) == 0;
+        bool flashOn = ((int)(clock() / 400) % 2) == 0;
         bool showLeft = flashOn && (indicatorMode == 1 || indicatorMode == 3);
         bool showRight = flashOn && (indicatorMode == 2 || indicatorMode == 3);
 
