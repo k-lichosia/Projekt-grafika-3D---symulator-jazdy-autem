@@ -1,6 +1,7 @@
+#define GLFW_INCLUDE_NONE
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_SWIZZLE
-#define GLEW_STATIC  
+#define GLEW_STATIC
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -25,8 +26,8 @@
 #pragma comment(lib, "glfw3.lib")
 #pragma comment(lib, "opengl32.lib")
 
-ShaderProgram* spMap; 
-float dist = 0.0f;    
+ShaderProgram* spMap;
+float dist = 0.0f;
 float speed_x = 0;
 float speed_y = 0;
 float aspectRatio = 1;
@@ -39,12 +40,12 @@ float spawnTimer = 0.0f;
 
 ObjModel modelSamochodu;
 
-extern GLuint texAsphalt; 
+extern GLuint texAsphalt;
 extern GLuint texBuilding;
 extern GLuint texGrass;
 
 bool isCrashed = false;
-//bool cameraTopDown = false; 
+//bool cameraTopDown = false; 
 int cameraMode = 0; // 0 = TPP, 1 = Lot Ptaka, 2 = Pierwsza osoba
 
 void error_callback(int error, const char* description) {
@@ -52,34 +53,34 @@ void error_callback(int error, const char* description) {
 }
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    if (action == GLFW_PRESS) {
-        if (key == GLFW_KEY_LEFT) speed_x = -PI / 2;
-        if (key == GLFW_KEY_RIGHT) speed_x = PI / 2;
-        if (key == GLFW_KEY_UP) speed_y = PI / 2;
-        if (key == GLFW_KEY_DOWN) speed_y = -PI / 2;
+	if (action == GLFW_PRESS) {
+		if (key == GLFW_KEY_LEFT) speed_x = -PI / 2;
+		if (key == GLFW_KEY_RIGHT) speed_x = PI / 2;
+		if (key == GLFW_KEY_UP) speed_y = PI / 2;
+		if (key == GLFW_KEY_DOWN) speed_y = -PI / 2;
 
-        if (key == GLFW_KEY_D) autoGracza.toggleLeftIndicator();
-        if (key == GLFW_KEY_A) autoGracza.toggleRightIndicator();
-        if (key == GLFW_KEY_S) autoGracza.toggleHazardLights();
+		if (key == GLFW_KEY_D) autoGracza.toggleLeftIndicator();
+		if (key == GLFW_KEY_A) autoGracza.toggleRightIndicator();
+		if (key == GLFW_KEY_S) autoGracza.toggleHazardLights();
 
 		if (key == GLFW_KEY_SPACE && isCrashed) {
 			isCrashed = false;
-			glClearColor(0.15f, 0.25f, 0.45f, 1.0f); 
-			autoGracza.indicatorMode = 0; 
-			inneAuta.clear(); 
-			spawnTimer = 0.0f; 
+			glClearColor(0.15f, 0.25f, 0.45f, 1.0f);
+			autoGracza.indicatorMode = 0;
+			inneAuta.clear();
+			spawnTimer = 0.0f;
 		}
 
 		if (key == GLFW_KEY_K && action == GLFW_PRESS) {
 			cameraMode = (cameraMode + 1) % 3;
 		}
-    }
-    if (action == GLFW_RELEASE) {
-        if (key == GLFW_KEY_LEFT) speed_x = 0;
-        if (key == GLFW_KEY_RIGHT) speed_x = 0;
-        if (key == GLFW_KEY_UP) speed_y = 0;
-        if (key == GLFW_KEY_DOWN) speed_y = 0;
-    }
+	}
+	if (action == GLFW_RELEASE) {
+		if (key == GLFW_KEY_LEFT) speed_x = 0;
+		if (key == GLFW_KEY_RIGHT) speed_x = 0;
+		if (key == GLFW_KEY_UP) speed_y = 0;
+		if (key == GLFW_KEY_DOWN) speed_y = 0;
+	}
 }
 
 void windowResizeCallback(GLFWwindow* window, int width, int height) {
@@ -176,7 +177,7 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 		);
 		break;
 
-	case 1: 
+	case 1:
 		V = glm::lookAt(
 			glm::vec3(0.0f, 18.0f, autoGracza.z - 2.0f),
 			glm::vec3(0.0f, 0.0f, autoGracza.z + 10.0f),
@@ -184,56 +185,51 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 		);
 		break;
 
-	case 2: 
+	case 2:
 		V = glm::lookAt(
-			glm::vec3(autoGracza.x, 1.5f, autoGracza.z+1.15),
+			glm::vec3(autoGracza.x, 1.5f, autoGracza.z + 1.15),
 			glm::vec3(autoGracza.x, 1.5f, autoGracza.z + 5.0f),
 			glm::vec3(0.0f, 1.0f, 0.0f)
 		);
 		break;
 	}
-	
+
 	glm::mat4 P = glm::perspective(50.0f * PI / 180.0f, aspectRatio, 0.01f, 200.0f);
 
 	spMap->use();
 	glUniformMatrix4fv(spMap->u("P"), 1, false, glm::value_ptr(P));
 	glUniformMatrix4fv(spMap->u("V"), 1, false, glm::value_ptr(V));
-	renderCity(spMap, dist);
+
+	glm::vec3 globalLampPositions[10];
+	int globalLightCount = 0;
+
+	renderCity(spMap, dist, globalLampPositions, &globalLightCount);
 
 	glUseProgram(0);
 
-	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixf(glm::value_ptr(P));
-
-	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixf(glm::value_ptr(V));
-
+	glMatrixMode(GL_PROJECTION); 
+	glLoadMatrixf(glm::value_ptr(P)); 
+	glMatrixMode(GL_MODELVIEW); 
+	glLoadMatrixf(glm::value_ptr(V)); 
 	GLfloat light_position[] = { 10.0f, 20.0f, 10.0f, 0.0f };
 	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
 	glPushMatrix();
 	glTranslatef(autoGracza.x, autoGracza.y, autoGracza.z);
-
 	float katSkretu = speed_x * 15.0f;
 	glRotatef(90.0f - katSkretu, 0.0f, 1.0f, 0.0f);
-
 	glScalef(3.0f, 3.0f, 3.0f);
 	glTranslatef(-1.0f, -0.25f, -0.4f);
-
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
 	glEnable(GL_COLOR_MATERIAL);
 	glEnable(GL_NORMALIZE);
-
 	glColor3f(0.2f, 0.4f, 1.0f);
-
 	GLfloat mat_specular[] = { 0.8f, 0.8f, 0.8f, 1.0f };
 	GLfloat mat_shininess[] = { 50.0f };
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
 	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
-
 	autoGracza.draw_model_only();
-
 	glDisable(GL_NORMALIZE);
 	glDisable(GL_LIGHTING);
 	glPopMatrix();
@@ -241,43 +237,45 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	for (int i = 0; i < inneAuta.size(); i++) {
 		glPushMatrix();
 
-		glTranslatef(inneAuta[i].x, inneAuta[i].y+0.1, inneAuta[i].z);
+		glTranslatef(inneAuta[i].x, inneAuta[i].y + 0.1, inneAuta[i].z);
 		glRotatef(180.0f, 0.0f, 1.0f, 0.0f);
-
 		glScalef(1.0f, 1.0f, 1.0f);
 
-		glEnable(GL_LIGHTING);
-		glEnable(GL_LIGHT0);
-		glEnable(GL_COLOR_MATERIAL);
-		glEnable(GL_NORMALIZE);
+		sp->use();
 
-		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
-		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+		glUniformMatrix4fv(sp->u("P"), 1, false, glm::value_ptr(P));
+		glUniformMatrix4fv(sp->u("V"), 1, false, glm::value_ptr(V));
+
+		glm::mat4 M = glm::mat4(1.0f);
+		M = glm::translate(M, glm::vec3(inneAuta[i].x, inneAuta[i].y + 0.1f, inneAuta[i].z));
+		M = glm::rotate(M, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		M = glm::scale(M, glm::vec3(1.0f, 1.0f, 1.0f));
+		glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
+
+		glUniform3fv(sp->u("lightPositions"), globalLightCount, glm::value_ptr(globalLampPositions[0]));
+		glUniform1i(sp->u("lightCount"), globalLightCount);
 
 		modelSamochodu.draw(inneAuta[i].colorR, inneAuta[i].colorG, inneAuta[i].colorB);
 
+		glUseProgram(0);
+
 		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE); 
-		glDisable(GL_LIGHTING);           
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		glDisable(GL_LIGHTING);
 
-		glBegin(GL_QUADS);
+		if (!isCrashed) {
+			glBegin(GL_QUADS);
+			float npcRoadY = -0.388f;
+			glColor4f(1.0f, 1.0f, 0.8f, 0.45f);
+			glVertex3f(-0.9f, npcRoadY, 1.2f);
+			glVertex3f(0.9f, npcRoadY, 1.2f);
+			glColor4f(1.0f, 1.0f, 0.8f, 0.0f);
+			glVertex3f(3.0f, npcRoadY, 12.0f);
+			glVertex3f(-3.0f, npcRoadY, 12.0f);
+			glEnd();
+		}
 
-		float npcRoadY = -0.388f;
-
-		glColor4f(1.0f, 1.0f, 0.8f, 0.45f);
-		glVertex3f(-0.9f, npcRoadY, 1.2f); 
-		glVertex3f(0.9f, npcRoadY, 1.2f); 
-
-		glColor4f(1.0f, 1.0f, 0.8f, 0.0f);
-		glVertex3f(3.0f, npcRoadY, 12.0f); 
-		glVertex3f(-3.0f, npcRoadY, 12.0f);
-
-		glEnd();
-
-		glEnable(GL_LIGHTING);
 		glDisable(GL_BLEND);
-
-		glDisable(GL_NORMALIZE);
 		glPopMatrix();
 	}
 	glfwSwapBuffers(window);
@@ -287,7 +285,7 @@ bool checkCollision(Car& player, std::vector<Car>& npcs) {
 	float playerMinX = player.x - 0.45f;
 	float playerMaxX = player.x + 0.45f;
 
-	float playerMinZ = player.z - 2.0f; 
+	float playerMinZ = player.z - 2.0f;
 	float playerMaxZ = player.z + 2.9f;
 
 	for (int i = 0; i < npcs.size(); i++) {
@@ -295,7 +293,7 @@ bool checkCollision(Car& player, std::vector<Car>& npcs) {
 		float npcMaxX = npcs[i].x + 2.0;
 
 		float npcMinZ = npcs[i].z - 3.0f;
-		float npcMaxZ = npcs[i].z + 1.5f; 
+		float npcMaxZ = npcs[i].z + 1.5f;
 
 		bool collisionX = (playerMinX <= npcMaxX) && (playerMaxX >= npcMinX);
 		bool collisionZ = (playerMinZ <= npcMaxZ) && (playerMaxZ >= npcMinZ);
@@ -352,11 +350,11 @@ int main(void)
 			autoGracza.x -= speed_x * deltaTime * 5.0f;
 			autoGracza.z += speed_y * deltaTime * 5.0f;
 
-			if (autoGracza.x < -4.0f) autoGracza.x = -4.0f;
-			if (autoGracza.x > 3.5f)  autoGracza.x = 3.5f;
+			if (autoGracza.x < -4.0f) autoGracza.x = -4.0f; 
+			if (autoGracza.x > 3.5f) autoGracza.x = 3.5f; 
 
 			if (autoGracza.z < -6.0f) autoGracza.z = -6.0f;
-			if (autoGracza.z > 5.0f)  autoGracza.z = 5.0f;
+			if (autoGracza.z > 5.0f) autoGracza.z = 5.0f;
 
 			autoGracza.wheelAngle += 200.0f * deltaTime;
 
@@ -403,8 +401,8 @@ int main(void)
 				isCrashed = true;
 				speed_x = 0;
 				speed_y = 0;
-				glClearColor(0.8f, 0.1f, 0.1f, 1.0f); 
-				autoGracza.indicatorMode = 3; 
+				glClearColor(0.8f, 0.1f, 0.1f, 1.0f);
+				autoGracza.indicatorMode = 3;
 			}
 		}
 
