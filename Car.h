@@ -1,66 +1,85 @@
-#ifndef CAR_H
+Ôªø#ifndef CAR_H
 #define CAR_H
 
 #include <GLFW/glfw3.h>
-#include <math.h>
+#include <vector>
+#include <cmath>
 #include <time.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include "shaderprogram.h"
 
 class Car {
-private:
-    void drawTire(float radius, float thickness) {
-        glColor3f(0.05f, 0.05f, 0.05f);
-        glBegin(GL_QUAD_STRIP);
-        for (int i = 0; i <= 20; i++) {
-            float angle = i * 3.14159f * 2.0f / 20.0f;
-            float cx = radius * cos(angle);
-            float cy = radius * sin(angle);
-            glVertex3f(cx, cy, thickness / 2.0f);
-            glVertex3f(cx, cy, -thickness / 2.0f);
-        }
-        glEnd();
-
-        glBegin(GL_TRIANGLE_FAN);
-        glVertex3f(0.0f, 0.0f, thickness / 2.0f);
-        for (int i = 0; i <= 20; i++) {
-            float angle = i * 3.14159f * 2.0f / 20.0f;
-            glVertex3f(radius * cos(angle), radius * sin(angle), thickness / 2.0f);
-        }
-        glEnd();
-
-        glBegin(GL_TRIANGLE_FAN);
-        glVertex3f(0.0f, 0.0f, -thickness / 2.0f);
-        for (int i = 20; i >= 0; i--) {
-            float angle = i * 3.14159f * 2.0f / 20.0f;
-            glVertex3f(radius * cos(angle), radius * sin(angle), -thickness / 2.0f);
-        }
-        glEnd();
-    }
-
-    void drawExhaust(float radius1, float radius2, float length) {
-        glBegin(GL_QUAD_STRIP);
-        for (int i = 0; i <= 10; i++) {
-            float angle = i * 3.14159f * 2.0f / 10.0f;
-            float c = cos(angle);
-            float s = sin(angle);
-            glVertex3f(radius1 * c, radius1 * s, 0.0f);
-            glVertex3f(radius2 * c, radius2 * s, length);
-        }
-        glEnd();
-    }
-
 public:
+    // Wewnƒôtrzne narzƒôdzie do nowoczesnego OpenGL - automatycznie tnie na tr√≥jkƒÖty i liczy ≈õwiat≈Ço
+    struct CarPart {
+        GLuint vao = 0, vboVerts = 0, vboNorms = 0;
+        std::vector<float> vertices;
+        std::vector<float> normals;
+
+        void addTri(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3) {
+            glm::vec3 u = p2 - p1;
+            glm::vec3 v = p3 - p1;
+            glm::vec3 n = glm::cross(u, v);
+            if (glm::length(n) > 0.0001f) n = glm::normalize(n);
+            else n = glm::vec3(0, 1, 0); // Zabezpieczenie przed b≈Çƒôdem zera
+
+            vertices.insert(vertices.end(), { p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, p3.x, p3.y, p3.z });
+            normals.insert(normals.end(), { n.x, n.y, n.z, n.x, n.y, n.z, n.x, n.y, n.z });
+        }
+
+        void addQuad(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 p4) {
+            addTri(p1, p2, p3);
+            addTri(p1, p3, p4);
+        }
+
+        void build(ShaderProgram* sp) {
+            if (vertices.empty()) return;
+            glGenVertexArrays(1, &vao);
+            glBindVertexArray(vao);
+
+            glGenBuffers(1, &vboVerts);
+            glBindBuffer(GL_ARRAY_BUFFER, vboVerts);
+            glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+            GLint vLoc = sp->a("vertex");
+            if (vLoc != -1) { glEnableVertexAttribArray(vLoc); glVertexAttribPointer(vLoc, 3, GL_FLOAT, GL_FALSE, 0, NULL); }
+
+            glGenBuffers(1, &vboNorms);
+            glBindBuffer(GL_ARRAY_BUFFER, vboNorms);
+            glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), normals.data(), GL_STATIC_DRAW);
+            GLint nLoc = sp->a("normal");
+            if (nLoc != -1) { glEnableVertexAttribArray(nLoc); glVertexAttribPointer(nLoc, 3, GL_FLOAT, GL_FALSE, 0, NULL); }
+
+            glBindVertexArray(0);
+        }
+
+        void draw() {
+            if (vao == 0) return;
+            glBindVertexArray(vao);
+            glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 3);
+            glBindVertexArray(0);
+        }
+    };
+
     float x, y, z;
     float wheelAngle;
     float r, g, b;
-
-    float colorR = 1.0f;
-    float colorG = 1.0f;
-    float colorB = 1.0f;
-
     int indicatorMode = 0;
 
+    // Nasze dwie nowoczesne czƒô≈õci o≈õwietlane z Shadera
+    CarPart bodyMesh;
+    CarPart glassMesh;
+
     Car(float startX = 0.0f, float startY = 0.0f, float startZ = 0.0f)
-        : x(startX), y(startY), z(startZ), wheelAngle(0.0f), r(0.0f), g(0.7f), b(0.15f) {
+        : x(startX), y(startY), z(startZ), wheelAngle(0.0f), r(0.2f), g(0.4f), b(1.0f) {
+    }
+
+    // Dodaj to w sekcji public:
+    void setColor(float red, float green, float blue) {
+        r = red;
+        g = green;
+        b = blue;
     }
 
     void toggleLeftIndicator() { indicatorMode = (indicatorMode == 1) ? 0 : 1; }
@@ -72,89 +91,77 @@ public:
         wheelAngle += speed * 50.0f;
     }
 
-    void setColor(float red, float green, float blue) {
-        r = red; g = green; b = blue;
+    // ==========================================
+    // 1. ≈ÅADOWANIE KAROSERII DO KARTY GRAFICZNEJ (ZADZIA≈ÅA RAZ)
+    // ==========================================
+    void initModern(ShaderProgram* sp) {
+        // --- Karoseria --- (Twoje wsp√≥≈Çrzƒôdne przet≈Çumaczone na nowy system!)
+        bodyMesh.addQuad(glm::vec3(0.2f, 0.4f, 0.6f), glm::vec3(0.6f, 0.5f, 0.6f), glm::vec3(0.6f, 0.5f, 0.2f), glm::vec3(0.2f, 0.4f, 0.2f));
+        bodyMesh.addQuad(glm::vec3(0.2f, 0.4f, 0.6f), glm::vec3(0.6f, 0.2f, 0.6f), glm::vec3(0.6f, 0.2f, 0.2f), glm::vec3(0.2f, 0.2f, 0.2f));
+        bodyMesh.addQuad(glm::vec3(0.2f, 0.2f, 0.6f), glm::vec3(0.2f, 0.4f, 0.6f), glm::vec3(0.2f, 0.4f, 0.2f), glm::vec3(0.2f, 0.2f, 0.2f));
+        bodyMesh.addQuad(glm::vec3(0.6f, 0.2f, 0.6f), glm::vec3(0.6f, 0.5f, 0.6f), glm::vec3(0.6f, 0.5f, 0.2f), glm::vec3(0.6f, 0.2f, 0.2f));
+        bodyMesh.addQuad(glm::vec3(0.2f, 0.2f, 0.6f), glm::vec3(0.6f, 0.2f, 0.6f), glm::vec3(0.6f, 0.5f, 0.6f), glm::vec3(0.2f, 0.4f, 0.6f));
+        bodyMesh.addQuad(glm::vec3(0.2f, 0.2f, 0.2f), glm::vec3(0.6f, 0.2f, 0.2f), glm::vec3(0.6f, 0.5f, 0.2f), glm::vec3(0.2f, 0.4f, 0.2f));
+        bodyMesh.addQuad(glm::vec3(0.7f, 0.65f, 0.6f), glm::vec3(0.7f, 0.65f, 0.2f), glm::vec3(1.7f, 0.65f, 0.2f), glm::vec3(1.7f, 0.65f, 0.6f));
+
+        bodyMesh.addQuad(glm::vec3(1.8f, 0.5f, 0.6f), glm::vec3(1.8f, 0.5f, 0.2f), glm::vec3(2.1f, 0.4f, 0.2f), glm::vec3(2.1f, 0.4f, 0.6f));
+        bodyMesh.addQuad(glm::vec3(2.1f, 0.2f, 0.6f), glm::vec3(2.1f, 0.2f, 0.2f), glm::vec3(1.8f, 0.2f, 0.6f), glm::vec3(1.8f, 0.2f, 0.6f));
+        bodyMesh.addQuad(glm::vec3(2.1f, 0.4f, 0.6f), glm::vec3(2.1f, 0.4f, 0.2f), glm::vec3(2.1f, 0.2f, 0.2f), glm::vec3(2.1f, 0.2f, 0.6f));
+        bodyMesh.addQuad(glm::vec3(1.8f, 0.2f, 0.2f), glm::vec3(1.8f, 0.5f, 0.2f), glm::vec3(2.1f, 0.4f, 0.2f), glm::vec3(2.1f, 0.2f, 0.2f));
+        bodyMesh.addQuad(glm::vec3(1.8f, 0.2f, 0.6f), glm::vec3(1.8f, 0.5f, 0.6f), glm::vec3(2.1f, 0.4f, 0.6f), glm::vec3(2.1f, 0.2f, 0.6f));
+
+        bodyMesh.addQuad(glm::vec3(0.6f, 0.5f, 0.6f), glm::vec3(0.6f, 0.2f, 0.6f), glm::vec3(1.8f, 0.2f, 0.6f), glm::vec3(1.8f, 0.5f, 0.6f));
+        bodyMesh.addQuad(glm::vec3(0.6f, 0.2f, 0.6f), glm::vec3(0.6f, 0.2f, 0.2f), glm::vec3(1.8f, 0.2f, 0.2f), glm::vec3(1.8f, 0.2f, 0.6f));
+        bodyMesh.addQuad(glm::vec3(0.6f, 0.5f, 0.2f), glm::vec3(0.6f, 0.2f, 0.2f), glm::vec3(1.8f, 0.2f, 0.2f), glm::vec3(1.8f, 0.5f, 0.2f));
+
+        bodyMesh.addQuad(glm::vec3(0.7f, 0.65f, 0.2f), glm::vec3(0.7f, 0.5f, 0.2f), glm::vec3(0.75f, 0.5f, 0.2f), glm::vec3(0.77f, 0.65f, 0.2f));
+        bodyMesh.addQuad(glm::vec3(1.2f, 0.65f, 0.2f), glm::vec3(1.2f, 0.5f, 0.2f), glm::vec3(1.25f, 0.5f, 0.2f), glm::vec3(1.27f, 0.65f, 0.2f));
+        bodyMesh.addQuad(glm::vec3(1.65f, 0.65f, 0.2f), glm::vec3(1.65f, 0.5f, 0.2f), glm::vec3(1.7f, 0.5f, 0.2f), glm::vec3(1.7f, 0.65f, 0.2f));
+        bodyMesh.addQuad(glm::vec3(0.75f, 0.65f, 0.2f), glm::vec3(0.75f, 0.63f, 0.2f), glm::vec3(1.7f, 0.63f, 0.2f), glm::vec3(1.7f, 0.65f, 0.2f));
+        bodyMesh.addQuad(glm::vec3(0.75f, 0.65f, 0.6f), glm::vec3(0.75f, 0.63f, 0.6f), glm::vec3(1.7f, 0.63f, 0.6f), glm::vec3(1.7f, 0.65f, 0.6f));
+        bodyMesh.build(sp);
+
+        // --- Szyby ---
+        glassMesh.addQuad(glm::vec3(0.77f, 0.63f, 0.2f), glm::vec3(0.75f, 0.5f, 0.2f), glm::vec3(1.2f, 0.5f, 0.2f), glm::vec3(1.22f, 0.63f, 0.2f));
+        glassMesh.addQuad(glm::vec3(1.27f, 0.63f, 0.2f), glm::vec3(1.25f, 0.5f, 0.2f), glm::vec3(1.65f, 0.5f, 0.2f), glm::vec3(1.67f, 0.63f, 0.2f));
+        glassMesh.addQuad(glm::vec3(0.77f, 0.63f, 0.6f), glm::vec3(0.75f, 0.5f, 0.6f), glm::vec3(1.2f, 0.5f, 0.6f), glm::vec3(1.22f, 0.63f, 0.6f));
+        glassMesh.addQuad(glm::vec3(1.27f, 0.63f, 0.6f), glm::vec3(1.25f, 0.5f, 0.6f), glm::vec3(1.65f, 0.5f, 0.6f), glm::vec3(1.67f, 0.63f, 0.6f));
+        glassMesh.addQuad(glm::vec3(0.6f, 0.5f, 0.6f), glm::vec3(0.6f, 0.5f, 0.2f), glm::vec3(0.7f, 0.65f, 0.2f), glm::vec3(0.7f, 0.65f, 0.6f));
+        glassMesh.addQuad(glm::vec3(1.7f, 0.65f, 0.6f), glm::vec3(1.7f, 0.65f, 0.2f), glm::vec3(1.8f, 0.5f, 0.2f), glm::vec3(1.8f, 0.5f, 0.6f));
+        glassMesh.addTri(glm::vec3(0.6f, 0.5f, 0.6f), glm::vec3(0.7f, 0.65f, 0.6f), glm::vec3(0.7f, 0.5f, 0.6f));
+        glassMesh.addTri(glm::vec3(0.6f, 0.5f, 0.2f), glm::vec3(0.7f, 0.65f, 0.2f), glm::vec3(0.7f, 0.5f, 0.2f));
+        glassMesh.addTri(glm::vec3(1.7f, 0.65f, 0.2f), glm::vec3(1.8f, 0.5f, 0.2f), glm::vec3(1.7f, 0.5f, 0.2f));
+        glassMesh.addTri(glm::vec3(1.7f, 0.65f, 0.6f), glm::vec3(1.8f, 0.5f, 0.6f), glm::vec3(1.7f, 0.5f, 0.6f));
+        glassMesh.build(sp);
     }
 
-    void draw_model_only() {
-        GLfloat body_specular[] = { 0.6f, 0.6f, 0.6f, 1.0f };
-        GLfloat body_shininess[] = { 50.0f };
-        glMaterialfv(GL_FRONT, GL_SPECULAR, body_specular);
-        glMaterialfv(GL_FRONT, GL_SHININESS, body_shininess);
+    // ==========================================
+    // 2. NOWOCZESNE RYSOWANIE SHADERAMI (Karoseria)
+    // ==========================================
+    void drawModern(ShaderProgram* sp, glm::mat4 M) {
+        glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
 
-        // ==========================================
-        // 1. G£”WNA BRY£A SAMOCHODU
-        // ==========================================
-        glBegin(GL_QUADS);
-        glColor3f(r, g, b);
-        glVertex3f(0.2f, 0.4f, 0.6f); glVertex3f(0.6f, 0.5f, 0.6f); glVertex3f(0.6f, 0.5f, 0.2f); glVertex3f(0.2f, 0.4f, 0.2f);
-        glVertex3f(0.2f, 0.4f, 0.6f); glVertex3f(0.6f, 0.2f, 0.6f); glVertex3f(0.6f, 0.2f, 0.2f); glVertex3f(0.2f, 0.2f, 0.2f);
-        glVertex3f(0.2f, 0.2f, 0.6f); glVertex3f(0.2f, 0.4f, 0.6f); glVertex3f(0.2f, 0.4f, 0.2f); glVertex3f(0.2f, 0.2f, 0.2f);
-        glVertex3f(0.6f, 0.2f, 0.6f); glVertex3f(0.6f, 0.5f, 0.6f); glVertex3f(0.6f, 0.5f, 0.2f); glVertex3f(0.6f, 0.2f, 0.2f);
-        glVertex3f(0.2f, 0.2f, 0.6f); glVertex3f(0.6f, 0.2f, 0.6f); glVertex3f(0.6f, 0.5f, 0.6f); glVertex3f(0.2f, 0.4f, 0.6f);
-        glVertex3f(0.2f, 0.2f, 0.2f); glVertex3f(0.6f, 0.2f, 0.2f); glVertex3f(0.6f, 0.5f, 0.2f); glVertex3f(0.2f, 0.4f, 0.2f);
-        glVertex3f(0.7f, 0.65f, 0.6f); glVertex3f(0.7f, 0.65f, 0.2f); glVertex3f(1.7f, 0.65f, 0.2f); glVertex3f(1.7f, 0.65f, 0.6f);
+        glUniform3f(sp->u("objectColor"), r, g, b);
+        bodyMesh.draw();
 
-        glVertex3f(1.8f, 0.5f, 0.6f); glVertex3f(1.8f, 0.5f, 0.2f); glVertex3f(2.1f, 0.4f, 0.2f); glVertex3f(2.1f, 0.4f, 0.6f);
-        glVertex3f(2.1f, 0.2f, 0.6f); glVertex3f(2.1f, 0.2f, 0.2f); glVertex3f(1.8f, 0.2f, 0.6f); glVertex3f(1.8f, 0.2f, 0.6f);
-        glVertex3f(2.1f, 0.4f, 0.6f); glVertex3f(2.1f, 0.4f, 0.2f); glVertex3f(2.1f, 0.2f, 0.2f); glVertex3f(2.1f, 0.2f, 0.6f);
-        glVertex3f(1.8f, 0.2f, 0.2f); glVertex3f(1.8f, 0.5f, 0.2f); glVertex3f(2.1f, 0.4f, 0.2f); glVertex3f(2.1f, 0.2f, 0.2f);
-        glVertex3f(1.8f, 0.2f, 0.6f); glVertex3f(1.8f, 0.5f, 0.6f); glVertex3f(2.1f, 0.4f, 0.6f); glVertex3f(2.1f, 0.2f, 0.6f);
-
-        glVertex3f(0.6f, 0.5f, 0.6f); glVertex3f(0.6f, 0.2f, 0.6f); glVertex3f(1.8f, 0.2f, 0.6f); glVertex3f(1.8f, 0.5f, 0.6f);
-        glVertex3f(0.6f, 0.2f, 0.6f); glVertex3f(0.6f, 0.2f, 0.2f); glVertex3f(1.8f, 0.2f, 0.2f); glVertex3f(1.8f, 0.2f, 0.6f);
-        glVertex3f(0.6f, 0.5f, 0.2f); glVertex3f(0.6f, 0.2f, 0.2f); glVertex3f(1.8f, 0.2f, 0.2f); glVertex3f(1.8f, 0.5f, 0.2f);
-
-        glVertex3f(0.7f, 0.65f, 0.2f); glVertex3f(0.7f, 0.5f, 0.2f); glVertex3f(0.75f, 0.5f, 0.2f); glVertex3f(0.77f, 0.65f, 0.2f);
-        glVertex3f(1.2f, 0.65f, 0.2f); glVertex3f(1.2f, 0.5f, 0.2f); glVertex3f(1.25f, 0.5f, 0.2f); glVertex3f(1.27f, 0.65f, 0.2f);
-        glVertex3f(1.65f, 0.65f, 0.2f); glVertex3f(1.65f, 0.5f, 0.2f); glVertex3f(1.7f, 0.5f, 0.2f); glVertex3f(1.7f, 0.65f, 0.2f);
-        glVertex3f(0.75f, 0.65f, 0.2f); glVertex3f(0.75f, 0.63f, 0.2f); glVertex3f(1.7f, 0.63f, 0.2f); glVertex3f(1.7f, 0.65f, 0.2f);
-        glVertex3f(0.75f, 0.65f, 0.6f); glVertex3f(0.75f, 0.63f, 0.6f); glVertex3f(1.7f, 0.63f, 0.6f); glVertex3f(1.7f, 0.65f, 0.6f);
-        glEnd();
-
-        // ==========================================
-        // 2. SZYBY SAMOCHODU
-        // ==========================================
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        GLfloat glass_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-        GLfloat glass_shininess[] = { 120.0f };
-        glMaterialfv(GL_FRONT, GL_SPECULAR, glass_specular);
-        glMaterialfv(GL_FRONT, GL_SHININESS, glass_shininess);
-        glColor4f(0.5f, 0.8f, 1.0f, 0.4f);
-
-        glBegin(GL_QUADS);
-        glVertex3f(0.77f, 0.63f, 0.2f); glVertex3f(0.75f, 0.5f, 0.2f); glVertex3f(1.2f, 0.5f, 0.2f); glVertex3f(1.22f, 0.63f, 0.2f);
-        glVertex3f(1.27f, 0.63f, 0.2f); glVertex3f(1.25f, 0.5f, 0.2f); glVertex3f(1.65f, 0.5f, 0.2f); glVertex3f(1.67f, 0.63f, 0.2f);
-        glVertex3f(0.77f, 0.63f, 0.6f); glVertex3f(0.75f, 0.5f, 0.6f); glVertex3f(1.2f, 0.5f, 0.6f); glVertex3f(1.22f, 0.63f, 0.6f);
-        glVertex3f(1.27f, 0.63f, 0.6f); glVertex3f(1.25f, 0.5f, 0.6f); glVertex3f(1.65f, 0.5f, 0.6f); glVertex3f(1.67f, 0.63f, 0.6f);
-        glVertex3f(0.6f, 0.5f, 0.6f); glVertex3f(0.6f, 0.5f, 0.2f); glVertex3f(0.7f, 0.65f, 0.2f); glVertex3f(0.7f, 0.65f, 0.6f);
-        glVertex3f(1.7f, 0.65f, 0.6f); glVertex3f(1.7f, 0.65f, 0.2f); glVertex3f(1.8f, 0.5f, 0.2f); glVertex3f(1.8f, 0.5f, 0.6f);
-        glEnd();
-
-        glBegin(GL_TRIANGLES);
-        glVertex3f(0.6f, 0.5f, 0.6f); glVertex3f(0.7f, 0.65f, 0.6f); glVertex3f(0.7f, 0.5f, 0.6f);
-        glVertex3f(0.6f, 0.5f, 0.2f); glVertex3f(0.7f, 0.65f, 0.2f); glVertex3f(0.7f, 0.5f, 0.2f);
-        glVertex3f(1.7f, 0.65f, 0.2f); glVertex3f(1.8f, 0.5f, 0.2f); glVertex3f(1.7f, 0.5f, 0.2f);
-        glVertex3f(1.7f, 0.65f, 0.6f); glVertex3f(1.8f, 0.5f, 0.6f); glVertex3f(1.7f, 0.5f, 0.6f);
-        glEnd();
+        glUniform3f(sp->u("objectColor"), 0.5f, 0.8f, 1.0f);
+        glassMesh.draw();
         glDisable(GL_BLEND);
+    }
 
-        glMaterialfv(GL_FRONT, GL_SPECULAR, body_specular);
-        glMaterialfv(GL_FRONT, GL_SHININESS, body_shininess);
-
-        // ZEGAR MIGANIE (WyciπgniÍty wyøej, øeby nak≥ada≥ siÍ teø na poúwiatÍ pod≥oøa)
-        //bool flashOn = ((int)(wheelAngle / 20.0f) % 2) == 0;
+    // ==========================================
+    // 3. STARE ZASADY - TYLKO DLA ≈öWIATE≈Å I K√ì≈Å
+    // ==========================================
+    void draw_accessories() {
         bool flashOn = ((int)(clock() / 400) % 2) == 0;
         bool showLeft = flashOn && (indicatorMode == 1 || indicatorMode == 3);
         bool showRight = flashOn && (indicatorMode == 2 || indicatorMode == 3);
 
-        // ==========================================
-        // 3. MATRYCA åWIATE£ NA KAROSERII (ØAR”WKI)
-        // ==========================================
         GLfloat noGlow[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-        // --- G£”WNE REFLEKTORY PRZ”D ---
+        // ≈öWIAT≈ÅA
         GLfloat glowLight[] = { 1.0f, 1.0f, 1.0f, 1.0f };
         glMaterialfv(GL_FRONT, GL_EMISSION, glowLight);
         glColor3f(1.0f, 1.0f, 1.0f);
@@ -163,7 +170,6 @@ public:
         glVertex3f(0.199f, 0.35f, 0.47f); glVertex3f(0.199f, 0.35f, 0.55f); glVertex3f(0.199f, 0.27f, 0.55f); glVertex3f(0.199f, 0.27f, 0.47f);
         glEnd();
 
-        // --- TYLNE LAMPY STOPU ---
         GLfloat rearGlowLight[] = { 1.0f, 0.0f, 0.0f, 1.0f };
         glMaterialfv(GL_FRONT, GL_EMISSION, rearGlowLight);
         glColor3f(1.0f, 0.1f, 0.1f);
@@ -172,9 +178,7 @@ public:
         glVertex3f(2.101f, 0.35f, 0.47f); glVertex3f(2.101f, 0.35f, 0.55f); glVertex3f(2.101f, 0.27f, 0.55f); glVertex3f(2.101f, 0.27f, 0.47f);
         glEnd();
 
-        // --- ØAR”WKI KIERUNKOWSKAZ”W ---
         GLfloat orangeGlow[] = { 1.0f, 0.5f, 0.0f, 1.0f };
-
         if (showLeft) {
             glMaterialfv(GL_FRONT, GL_EMISSION, orangeGlow); glColor3f(1.0f, 0.5f, 0.0f);
             glBegin(GL_QUADS);
@@ -182,7 +186,6 @@ public:
             glVertex3f(2.102f, 0.34f, 0.20f); glVertex3f(2.102f, 0.34f, 0.24f); glVertex3f(2.102f, 0.28f, 0.24f); glVertex3f(2.102f, 0.28f, 0.20f);
             glEnd();
         }
-
         if (showRight) {
             glMaterialfv(GL_FRONT, GL_EMISSION, orangeGlow); glColor3f(1.0f, 0.5f, 0.0f);
             glBegin(GL_QUADS);
@@ -190,124 +193,97 @@ public:
             glVertex3f(2.102f, 0.34f, 0.56f); glVertex3f(2.102f, 0.34f, 0.59f); glVertex3f(2.102f, 0.28f, 0.59f); glVertex3f(2.102f, 0.28f, 0.56f);
             glEnd();
         }
-
         glMaterialfv(GL_FRONT, GL_EMISSION, noGlow);
 
-        // ========================================================
-        // 4. SYSTEM POåWIAT POD£OØOWYCH (NA ASFALCIE)
-        // ========================================================
+        // PO≈öWIATY (Asfalt)
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE);
         glDisable(GL_LIGHTING);
-
         glDepthMask(GL_FALSE);
-
         float roadY = 0.015f;
-
         glBegin(GL_QUADS);
+        float glowStart = 2.1f, glowEnd = 2.8f;
+        glColor4f(1.0f, 0.0f, 0.0f, 0.25f); glVertex3f(glowStart, roadY, 0.23f); glVertex3f(glowStart, roadY, 0.35f);
+        glColor4f(1.0f, 0.0f, 0.0f, 0.0f);  glVertex3f(glowEnd, roadY, 0.35f);   glVertex3f(glowEnd, roadY, 0.23f);
+        glColor4f(1.0f, 0.0f, 0.0f, 0.25f); glVertex3f(glowStart, roadY, 0.45f); glVertex3f(glowStart, roadY, 0.57f);
+        glColor4f(1.0f, 0.0f, 0.0f, 0.0f);  glVertex3f(glowEnd, roadY, 0.57f);   glVertex3f(glowEnd, roadY, 0.45f);
 
-        // --- A. DELIKATNE CZERWONE PASKI ZA POJAZDEM (STA£E) ---
-        float glowStart = 2.1f;
-        float glowEnd = 2.8f;
-
-        // Lewy czerwony pasek pod≥oøa
-        glColor4f(1.0f, 0.0f, 0.0f, 0.25f);	glVertex3f(glowStart, roadY, 0.23f); glVertex3f(glowStart, roadY, 0.35f);
-        glColor4f(1.0f, 0.0f, 0.0f, 0.0f);	glVertex3f(glowEnd, roadY, 0.35f);   glVertex3f(glowEnd, roadY, 0.23f);
-
-        // Prawy czerwony pasek pod≥oøa
-        glColor4f(1.0f, 0.0f, 0.0f, 0.25f);	glVertex3f(glowStart, roadY, 0.45f); glVertex3f(glowStart, roadY, 0.57f);
-        glColor4f(1.0f, 0.0f, 0.0f, 0.0f);	glVertex3f(glowEnd, roadY, 0.57f);   glVertex3f(glowEnd, roadY, 0.45f);
-
-
-        // --- B. NOWOå∆: DELIKATNE POMARA—CZOWE PASKI KIERUNKOWSKAZ”W (MIGAJ•CE) ---
         if (showLeft) {
-            // PrzÛd lewy (krÛtki pasek rzucany przed lewy przedni naroønik)
             glColor4f(1.0f, 0.5f, 0.0f, 0.25f); glVertex3f(-0.05f, roadY, 0.18f); glVertex3f(-0.05f, roadY, 0.26f);
             glColor4f(1.0f, 0.5f, 0.0f, 0.0f);  glVertex3f(-0.75f, roadY, 0.26f); glVertex3f(-0.75f, roadY, 0.18f);
-
-            // Ty≥ lewy (krÛtki pasek rzucany za lewy tylny naroønik)
             glColor4f(1.0f, 0.5f, 0.0f, 0.25f); glVertex3f(2.1f, roadY, 0.18f);  glVertex3f(2.1f, roadY, 0.26f);
             glColor4f(1.0f, 0.5f, 0.0f, 0.0f);  glVertex3f(2.7f, roadY, 0.26f);  glVertex3f(2.7f, roadY, 0.18f);
         }
-
         if (showRight) {
-            // PrzÛd prawy (krÛtki pasek rzucany przed prawy przedni naroønik)
             glColor4f(1.0f, 0.5f, 0.0f, 0.25f); glVertex3f(-0.05f, roadY, 0.53f);  glVertex3f(-0.05, roadY, 0.61f);
             glColor4f(1.0f, 0.5f, 0.0f, 0.0f);  glVertex3f(-0.75f, roadY, 0.61f); glVertex3f(-0.75f, roadY, 0.53f);
-
-            // Ty≥ prawy (krÛtki pasek rzucany za prawy tylny naroønik)
             glColor4f(1.0f, 0.5f, 0.0f, 0.25f); glVertex3f(2.1f, roadY, 0.53f);  glVertex3f(2.1f, roadY, 0.61f);
             glColor4f(1.0f, 0.5f, 0.0f, 0.0f);  glVertex3f(2.7f, roadY, 0.61f);  glVertex3f(2.7f, roadY, 0.53f);
         }
-
         glEnd();
-
         glDepthMask(GL_TRUE);
         glEnable(GL_LIGHTING);
         glDisable(GL_BLEND);
 
-        // ==========================================
-        // 5. SYSTEM ZAP£ONU (Rura z ty≥u)
-        // ==========================================
+        // WYDECH
         glPushMatrix();
         glColor3f(0.4f, 0.4f, 0.4f);
         glTranslatef(1.65f, 0.2f, 0.3f);
         glRotatef(90.0f, 0, 1, 0);
         drawExhaust(0.02f, 0.03f, 0.5f);
-        getLog();
         glPopMatrix();
 
-        // ==========================================
-        // 6. KO£A (WHEELS)
-        // ==========================================
+        // KO≈ÅA
         glColor3f(0.7f, 0.7f, 0.7f);
-        glPushMatrix();
         float theta;
-
         glBegin(GL_LINE_STRIP);
-        for (theta = 0; theta < 360; theta = theta + 40) {
-            glVertex3f(0.6f, 0.2f, 0.62f);
-            glVertex3f(0.6f + (0.08f * (cos(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.2f + (0.08f * (sin(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.62f);
-        }
+        for (theta = 0; theta < 360; theta = theta + 40) { glVertex3f(0.6f, 0.2f, 0.62f); glVertex3f(0.6f + (0.08f * (cos(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.2f + (0.08f * (sin(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.62f); }
         glEnd();
-
         glBegin(GL_LINE_STRIP);
-        for (theta = 0; theta < 360; theta = theta + 40) {
-            glVertex3f(0.6f, 0.2f, 0.18f);
-            glVertex3f(0.6f + (0.08f * (cos(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.2f + (0.08f * (sin(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.18f);
-        }
+        for (theta = 0; theta < 360; theta = theta + 40) { glVertex3f(0.6f, 0.2f, 0.18f); glVertex3f(0.6f + (0.08f * (cos(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.2f + (0.08f * (sin(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.18f); }
         glEnd();
-
         glBegin(GL_LINE_STRIP);
-        for (theta = 0; theta < 360; theta = theta + 40) {
-            glVertex3f(1.7f, 0.2f, 0.18f);
-            glVertex3f(1.7f + (0.08f * (cos(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.2f + (0.08f * (sin(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.18f);
-        }
+        for (theta = 0; theta < 360; theta = theta + 40) { glVertex3f(1.7f, 0.2f, 0.18f); glVertex3f(1.7f + (0.08f * (cos(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.2f + (0.08f * (sin(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.18f); }
         glEnd();
-
         glBegin(GL_LINE_STRIP);
-        for (theta = 0; theta < 360; theta = theta + 40) {
-            glVertex3f(1.7f, 0.2f, 0.62f);
-            glVertex3f(1.7f + (0.08f * (cos(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.2f + (0.08f * (sin(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.62f);
-        }
+        for (theta = 0; theta < 360; theta = theta + 40) { glVertex3f(1.7f, 0.2f, 0.62f); glVertex3f(1.7f + (0.08f * (cos(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.2f + (0.08f * (sin(((theta + wheelAngle) * 3.14f) / 180.0f))), 0.62f); }
         glEnd();
 
         glPushMatrix(); glTranslatef(0.6f, 0.2f, 0.6f); drawTire(0.09f, 0.05f); glPopMatrix();
         glPushMatrix(); glTranslatef(0.6f, 0.2f, 0.2f); drawTire(0.09f, 0.05f); glPopMatrix();
         glPushMatrix(); glTranslatef(1.7f, 0.2f, 0.2f); drawTire(0.09f, 0.05f); glPopMatrix();
         glPushMatrix(); glTranslatef(1.7f, 0.2f, 0.6f); drawTire(0.09f, 0.05f); glPopMatrix();
-        glPopMatrix();
-    }
-
-    void draw() {
-        glPushMatrix();
-        glTranslatef(x, y, z);
-        draw_model_only();
-        glPopMatrix();
     }
 
 private:
-    void getLog() {}
+    void drawTire(float radius, float thickness) {
+        glColor3f(0.05f, 0.05f, 0.05f);
+        glBegin(GL_QUAD_STRIP);
+        for (int i = 0; i <= 20; i++) {
+            float angle = i * 3.14159f * 2.0f / 20.0f;
+            glVertex3f(radius * cos(angle), radius * sin(angle), thickness / 2.0f);
+            glVertex3f(radius * cos(angle), radius * sin(angle), -thickness / 2.0f);
+        }
+        glEnd();
+        glBegin(GL_TRIANGLE_FAN);
+        glVertex3f(0.0f, 0.0f, thickness / 2.0f);
+        for (int i = 0; i <= 20; i++) glVertex3f(radius * cos(i * 3.14159f * 2.0f / 20.0f), radius * sin(i * 3.14159f * 2.0f / 20.0f), thickness / 2.0f);
+        glEnd();
+        glBegin(GL_TRIANGLE_FAN);
+        glVertex3f(0.0f, 0.0f, -thickness / 2.0f);
+        for (int i = 20; i >= 0; i--) glVertex3f(radius * cos(i * 3.14159f * 2.0f / 20.0f), radius * sin(i * 3.14159f * 2.0f / 20.0f), -thickness / 2.0f);
+        glEnd();
+    }
+
+    void drawExhaust(float radius1, float radius2, float length) {
+        glBegin(GL_QUAD_STRIP);
+        for (int i = 0; i <= 10; i++) {
+            float angle = i * 3.14159f * 2.0f / 10.0f;
+            glVertex3f(radius1 * cos(angle), radius1 * sin(angle), 0.0f);
+            glVertex3f(radius2 * cos(angle), radius2 * sin(angle), length);
+        }
+        glEnd();
+    }
 };
 
 #endif // CAR_H

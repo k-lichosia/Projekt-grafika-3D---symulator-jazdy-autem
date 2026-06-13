@@ -1,6 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #pragma once
 
+#include "shaderprogram.h"
 #include <GL/glew.h>
 #include <vector>
 #include <string>
@@ -11,6 +12,8 @@
 #include <map>
 #include <cctype> // Potrzebne do obs³ugi ma³ych/wielkich liter
 
+extern ShaderProgram* sp;
+
 // Struktura przechowuj¹ca kolor z pliku .mtl
 struct Material {
 	float r = 0.8f, g = 0.8f, b = 0.8f; // Domyœlnie szary
@@ -19,9 +22,12 @@ struct Material {
 // Struktura przechowuj¹ca fragment modelu (np. tylko opony, tylko szyby)
 struct MeshPart {
 	Material mat;
-	std::string matName; // PAMIÊTAMY NAZWÊ: teraz zapisujemy jak nazywa siê ta czêœæ!
+	std::string matName; 
 	std::vector<float> vertices;
 	std::vector<float> normals;
+	GLuint vboVertices = 0;
+	GLuint vboNormals = 0;
+	GLuint vao = 0;
 };
 
 struct ObjModel {
@@ -133,63 +139,88 @@ struct ObjModel {
 				}
 			}
 		}
+
+		// --- WYSYLANIE MODELU DO KARTY GRAFICZNEJ (VBO) ---
+		for (auto& part : parts) {
+			if (!part.vertices.empty()) {
+				glGenBuffers(1, &part.vboVertices);
+				glBindBuffer(GL_ARRAY_BUFFER, part.vboVertices);
+				glBufferData(GL_ARRAY_BUFFER, part.vertices.size() * sizeof(float), part.vertices.data(), GL_STATIC_DRAW);
+			}
+			if (!part.normals.empty()) {
+				glGenBuffers(1, &part.vboNormals);
+				glBindBuffer(GL_ARRAY_BUFFER, part.vboNormals);
+				glBufferData(GL_ARRAY_BUFFER, part.normals.size() * sizeof(float), part.normals.data(), GL_STATIC_DRAW);
+			}
+		}
+		glBindBuffer(GL_ARRAY_BUFFER, 0); // Odpinamy bufor
+
 		std::cout << "Model " << filename << " gotowy!" << std::endl;
 		return true;
 	}
 
 	void draw(float customR = -1.0f, float customG = -1.0f, float customB = -1.0f) {
-		for (const auto& part : parts) {
+		GLint vertexLoc = sp->a("vertex");
+		GLint normalLoc = sp->a("normal");
+		GLint colorLoc = sp->u("objectColor");
+
+		// UWAGA: Usunieto 'const', bo bedziemy zapisywac wygenerowane VAO do struktury
+		for (auto& part : parts) {
 			if (part.vertices.empty()) continue;
 
 			bool zmienKolor = false;
 
-			// Jeœli podano losowy kolor, sprawdzamy czy ta czêœæ to karoseria
 			if (customR >= 0.0f && customG >= 0.0f && customB >= 0.0f) {
-				// Zamieniamy nazwê na ma³e litery, ¿eby wielkoœæ znaków nie mia³a znaczenia
 				std::string nameLower = part.matName;
 				std::transform(nameLower.begin(), nameLower.end(), nameLower.begin(), ::tolower);
 
-				// Szukamy s³ów kluczowych odpowiadaj¹cych za lakier/karoseriê
-				if (nameLower.find("body") != std::string::npos ||
-					nameLower.find("paint") != std::string::npos ||
-					nameLower.find("karoseria") != std::string::npos ||
-					nameLower.find("car") != std::string::npos ||
-					nameLower.find("exterior") != std::string::npos ||
-					nameLower.find("material") != std::string::npos) { // Czêsta nazwa z Blendera
+				if (nameLower.find("body") != std::string::npos || nameLower.find("paint") != std::string::npos ||
+					nameLower.find("karoseria") != std::string::npos || nameLower.find("car") != std::string::npos ||
+					nameLower.find("exterior") != std::string::npos || nameLower.find("material") != std::string::npos) {
 
-					// ZABEZPIECZENIE: Jeœli nazwa zawiera "wheel", "glass" itd., to jej NIE zmieniamy
-					if (nameLower.find("wheel") == std::string::npos &&
-						nameLower.find("tire") == std::string::npos &&
-						nameLower.find("glass") == std::string::npos &&
-						nameLower.find("window") == std::string::npos &&
-						nameLower.find("opon") == std::string::npos &&
-						nameLower.find("szyb") == std::string::npos) {
-
+					if (nameLower.find("wheel") == std::string::npos && nameLower.find("tire") == std::string::npos &&
+						nameLower.find("glass") == std::string::npos && nameLower.find("window") == std::string::npos &&
+						nameLower.find("opon") == std::string::npos && nameLower.find("szyb") == std::string::npos) {
 						zmienKolor = true;
 					}
 				}
 			}
 
-			// Malujemy odpowiednim kolorem
-			if (zmienKolor) {
-				glColor3f(customR, customG, customB); // Losowy lakier karoserii
+			float r = zmienKolor ? customR : part.mat.r;
+			float g = zmienKolor ? customG : part.mat.g;
+			float b = zmienKolor ? customB : part.mat.b;
+
+			glUniform3f(colorLoc, r, g, b);
+
+			// ==========================================
+			// TWORZENIE I AKTYWACJA VAO DLA WERSJI 330
+			// ==========================================
+			if (part.vao == 0) {
+				glGenVertexArrays(1, &part.vao); // Generujemy tylko raz
 			}
-			else {
-				glColor3f(part.mat.r, part.mat.g, part.mat.b); // Oryginalny kolor ko³a/szyby z MTL
+			glBindVertexArray(part.vao); // Aktywujemy VAO
+
+			if (part.vboVertices != 0 && vertexLoc != -1) {
+				glEnableVertexAttribArray(vertexLoc);
+				glBindBuffer(GL_ARRAY_BUFFER, part.vboVertices);
+				glVertexAttribPointer(vertexLoc, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 			}
 
-			glEnableClientState(GL_VERTEX_ARRAY);
-			glVertexPointer(3, GL_FLOAT, 0, part.vertices.data());
-
-			if (!part.normals.empty()) {
-				glEnableClientState(GL_NORMAL_ARRAY);
-				glNormalPointer(GL_FLOAT, 0, part.normals.data());
+			if (part.vboNormals != 0 && normalLoc != -1) {
+				glEnableVertexAttribArray(normalLoc);
+				glBindBuffer(GL_ARRAY_BUFFER, part.vboNormals);
+				glVertexAttribPointer(normalLoc, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 			}
 
+			// Rysowanie! Karta graficzna widzi aktywne VAO, wiec pozwala na rysowanie.
 			glDrawArrays(GL_TRIANGLES, 0, part.vertices.size() / 3);
 
-			glDisableClientState(GL_NORMAL_ARRAY);
-			glDisableClientState(GL_VERTEX_ARRAY);
+			// Sprzatanie po narysowaniu czesci modelu
+			if (normalLoc != -1) glDisableVertexAttribArray(normalLoc);
+			if (vertexLoc != -1) glDisableVertexAttribArray(vertexLoc);
+
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			glBindVertexArray(0); // Odpinamy VAO
 		}
 	}
 };
