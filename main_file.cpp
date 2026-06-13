@@ -45,7 +45,6 @@ extern GLuint texGrass;
 
 bool isCrashed = false;
 
-//Procedura obsługi błędów
 void error_callback(int error, const char* description) {
 	fputs(description, stderr);
 }
@@ -63,10 +62,10 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 
 		if (key == GLFW_KEY_SPACE && isCrashed) {
 			isCrashed = false;
-			glClearColor(0.15f, 0.25f, 0.45f, 1.0f); // Powrót do standardowego koloru nieba
-			autoGracza.indicatorMode = 0; // Wyłączamy światła awaryjne
-			inneAuta.clear(); // Usuwamy auta NPC z mapy, żeby mieć czystą drogę na start
-			spawnTimer = 0.0f; // Zerujemy timer pojawiania się nowych aut
+			glClearColor(0.15f, 0.25f, 0.45f, 1.0f); 
+			autoGracza.indicatorMode = 0; 
+			inneAuta.clear(); 
+			spawnTimer = 0.0f; 
 		}
     }
     if (action == GLFW_RELEASE) {
@@ -213,7 +212,6 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 		glRotatef(180.0f, 0.0f, 1.0f, 0.0f);
 
 		glScalef(1.0f, 1.0f, 1.0f);
-		//glTranslatef(-1.0f, 0.0f, -0.4f);
 
 		glEnable(GL_LIGHTING);
 		glEnable(GL_LIGHT0);
@@ -251,25 +249,6 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	}
 	glfwSwapBuffers(window);
 }
-
-/*bool checkCollision(Car& player, std::vector<Car>& npcs) {
-	float playerRadiusX = 0.45f;  //2.0 //0.45
-	float playerRadiusZ = 3.5f;  //0.6 //2.1
-
-	float npcRadiusX = 1.35f; //1.3 //1.35
-	float npcRadiusZ = 4.2f; //2.4 //2.7
-
-	for (int i = 0; i < npcs.size(); i++) {
-		float diffX = abs(player.x - npcs[i].x);
-		float diffZ = abs(player.z - npcs[i].z);
-
-		if (diffX < (playerRadiusX + npcRadiusX) &&
-			diffZ < (playerRadiusZ + npcRadiusZ)) {
-			return true; 
-		}
-	}
-	return false;
-}*/
 
 bool checkCollision(Car& player, std::vector<Car>& npcs) {
 	float playerMinX = player.x - 0.45f;

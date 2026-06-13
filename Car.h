@@ -200,7 +200,9 @@ public:
         glBlendFunc(GL_SRC_ALPHA, GL_ONE);
         glDisable(GL_LIGHTING);
 
-        float roadY = 0.112f;
+        glDepthMask(GL_FALSE);
+
+        float roadY = 0.015f;
 
         glBegin(GL_QUADS);
 
@@ -220,8 +222,8 @@ public:
         // --- B. NOWOŒÆ: DELIKATNE POMARAÑCZOWE PASKI KIERUNKOWSKAZÓW (MIGAJ¥CE) ---
         if (showLeft) {
             // Przód lewy (krótki pasek rzucany przed lewy przedni naro¿nik)
-            glColor4f(1.0f, 0.5f, 0.0f, 0.25f); glVertex3f(0.2f, roadY, 0.18f);  glVertex3f(0.2f, roadY, 0.26f);
-            glColor4f(1.0f, 0.5f, 0.0f, 0.0f);  glVertex3f(-0.4f, roadY, 0.26f); glVertex3f(-0.4f, roadY, 0.18f);
+            glColor4f(1.0f, 0.5f, 0.0f, 0.25f); glVertex3f(-0.05f, roadY, 0.18f); glVertex3f(-0.05f, roadY, 0.26f);
+            glColor4f(1.0f, 0.5f, 0.0f, 0.0f);  glVertex3f(-0.75f, roadY, 0.26f); glVertex3f(-0.75f, roadY, 0.18f);
 
             // Ty³ lewy (krótki pasek rzucany za lewy tylny naro¿nik)
             glColor4f(1.0f, 0.5f, 0.0f, 0.25f); glVertex3f(2.1f, roadY, 0.18f);  glVertex3f(2.1f, roadY, 0.26f);
@@ -230,8 +232,8 @@ public:
 
         if (showRight) {
             // Przód prawy (krótki pasek rzucany przed prawy przedni naro¿nik)
-            glColor4f(1.0f, 0.5f, 0.0f, 0.25f); glVertex3f(0.2f, roadY, 0.53f);  glVertex3f(0.2f, roadY, 0.61f);
-            glColor4f(1.0f, 0.5f, 0.0f, 0.0f);  glVertex3f(-0.4f, roadY, 0.61f); glVertex3f(-0.4f, roadY, 0.53f);
+            glColor4f(1.0f, 0.5f, 0.0f, 0.25f); glVertex3f(-0.05f, roadY, 0.53f);  glVertex3f(-0.05, roadY, 0.61f);
+            glColor4f(1.0f, 0.5f, 0.0f, 0.0f);  glVertex3f(-0.75f, roadY, 0.61f); glVertex3f(-0.75f, roadY, 0.53f);
 
             // Ty³ prawy (krótki pasek rzucany za prawy tylny naro¿nik)
             glColor4f(1.0f, 0.5f, 0.0f, 0.25f); glVertex3f(2.1f, roadY, 0.53f);  glVertex3f(2.1f, roadY, 0.61f);
@@ -240,6 +242,7 @@ public:
 
         glEnd();
 
+        glDepthMask(GL_TRUE);
         glEnable(GL_LIGHTING);
         glDisable(GL_BLEND);
 
