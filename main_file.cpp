@@ -44,6 +44,8 @@ extern GLuint texBuilding;
 extern GLuint texGrass;
 
 bool isCrashed = false;
+//bool cameraTopDown = false; 
+int cameraMode = 0; // 0 = TPP, 1 = Lot Ptaka, 2 = Pierwsza osoba
 
 void error_callback(int error, const char* description) {
 	fputs(description, stderr);
@@ -66,6 +68,10 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 			autoGracza.indicatorMode = 0; 
 			inneAuta.clear(); 
 			spawnTimer = 0.0f; 
+		}
+
+		if (key == GLFW_KEY_K && action == GLFW_PRESS) {
+			cameraMode = (cameraMode + 1) % 3;
 		}
     }
     if (action == GLFW_RELEASE) {
@@ -159,7 +165,34 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	glDisable(GL_COLOR_MATERIAL);
 	glDisable(GL_NORMALIZE);
 
-	glm::mat4 V = glm::lookAt(glm::vec3(0, 3, -10), glm::vec3(0, 0, 10), glm::vec3(0, 1, 0));
+	glm::mat4 V;
+
+	switch (cameraMode) {
+	case 0:
+		V = glm::lookAt(
+			glm::vec3(autoGracza.x * 0.15f, 3.0f, -10.0f),
+			glm::vec3(autoGracza.x * 0.3f, 0.0f, 10.0f),
+			glm::vec3(0.0f, 1.0f, 0.0f)
+		);
+		break;
+
+	case 1: 
+		V = glm::lookAt(
+			glm::vec3(0.0f, 18.0f, autoGracza.z - 2.0f),
+			glm::vec3(0.0f, 0.0f, autoGracza.z + 10.0f),
+			glm::vec3(0.0f, 1.0f, 0.0f)
+		);
+		break;
+
+	case 2: 
+		V = glm::lookAt(
+			glm::vec3(autoGracza.x, 1.5f, autoGracza.z+1.15),
+			glm::vec3(autoGracza.x, 1.5f, autoGracza.z + 5.0f),
+			glm::vec3(0.0f, 1.0f, 0.0f)
+		);
+		break;
+	}
+	
 	glm::mat4 P = glm::perspective(50.0f * PI / 180.0f, aspectRatio, 0.01f, 200.0f);
 
 	spMap->use();
@@ -184,8 +217,8 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	float katSkretu = speed_x * 15.0f;
 	glRotatef(90.0f - katSkretu, 0.0f, 1.0f, 0.0f);
 
-	glScalef(2.5f, 2.5f, 2.5f);
-	glTranslatef(-1.0f, 0.0f, -0.4f);
+	glScalef(3.0f, 3.0f, 3.0f);
+	glTranslatef(-1.0f, -0.25f, -0.4f);
 
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
@@ -208,7 +241,7 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 	for (int i = 0; i < inneAuta.size(); i++) {
 		glPushMatrix();
 
-		glTranslatef(inneAuta[i].x, inneAuta[i].y, inneAuta[i].z);
+		glTranslatef(inneAuta[i].x, inneAuta[i].y+0.1, inneAuta[i].z);
 		glRotatef(180.0f, 0.0f, 1.0f, 0.0f);
 
 		glScalef(1.0f, 1.0f, 1.0f);
@@ -255,13 +288,13 @@ bool checkCollision(Car& player, std::vector<Car>& npcs) {
 	float playerMaxX = player.x + 0.45f;
 
 	float playerMinZ = player.z - 2.0f; 
-	float playerMaxZ = player.z + 4.0f;
+	float playerMaxZ = player.z + 2.9f;
 
 	for (int i = 0; i < npcs.size(); i++) {
 		float npcMinX = npcs[i].x - 2.0f;
 		float npcMaxX = npcs[i].x + 2.0;
 
-		float npcMinZ = npcs[i].z - 4.0f;
+		float npcMinZ = npcs[i].z - 3.0f;
 		float npcMaxZ = npcs[i].z + 1.5f; 
 
 		bool collisionX = (playerMinX <= npcMaxX) && (playerMaxX >= npcMinX);

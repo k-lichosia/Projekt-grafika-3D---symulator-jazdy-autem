@@ -36,7 +36,7 @@ void main() {
     } 
     else if (useTexture == 2) {
         // Mapowanie UV dla tekstury asfaltu
-        vec2 autoUV = fragPos.xz * 0.4;
+        vec2 autoUV = localPos.xz * 0.4;
         vec4 texColor = texture(tex, autoUV);
         
         // Wykrywamy podbudowê asfaltu (ciemne wierzcho³ki)
@@ -72,7 +72,7 @@ void main() {
     // ====================================================================
 else if (useTexture == 4) {
         // Skalujemy teksturê na bazie pozycji œwiata, by kêpki by³y drobne i gêste
-        vec2 grassUV = fragPos.xz * 2.5; 
+        vec2 grassUV = localPos.xz * 2.5; 
         vec4 texColor = texture(tex, grassUV);
         
         // Soczysty, jasny kolor trawy dopasowany do sceny nocnej
