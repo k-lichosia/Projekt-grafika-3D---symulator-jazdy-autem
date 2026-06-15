@@ -68,6 +68,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             autoGracza.indicatorMode = 0;
             inneAuta.clear();
             spawnTimer = 0.0f;
+            PlaySound(TEXT("muzyka.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_LOOP); 
         }
 
         if (key == GLFW_KEY_K && action == GLFW_PRESS) {
@@ -203,9 +204,6 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 
     glUseProgram(0);
 
-    // ==================================================
-    // RYSOWANIE AUTA GRACZA (Z dynamicznymi latarniami!)
-    // ==================================================
     glMatrixMode(GL_PROJECTION);
     glLoadMatrixf(glm::value_ptr(P));
     glMatrixMode(GL_MODELVIEW);
@@ -215,32 +213,24 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
     glEnable(GL_COLOR_MATERIAL);
     glEnable(GL_NORMALIZE);
 
-    // ZABEZPIECZENIE: Oświetla model z obu stron (gdyby któryś Twój punkt był odwrócony)
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 
-    // WYŁĄCZAMY GŁÓWNE "SŁOŃCE" - to ono zagłuszało latarnie i robiło model statycznym!
     glDisable(GL_LIGHT0);
 
-    // Ustawiamy lekkie oświetlenie "nocy", żeby karoseria poza światłami nie była całkowicie czarna
     GLfloat ambientLight[] = { 0.25f, 0.25f, 0.25f, 1.0f };
     glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambientLight);
 
-    // Odpalamy światła z latarni
     for (int i = 0; i < globalLightCount && i < 7; i++) {
         glEnable(GL_LIGHT1 + i);
-        // Światło musi mieć '1.0f' na końcu, by działać jak latarnia (punktowo), a nie słońce (kierunkowo)
         GLfloat pos[] = { globalLampPositions[i].x, globalLampPositions[i].y, globalLampPositions[i].z, 1.0f };
-        GLfloat col[] = { 1.0f, 0.9f, 0.6f, 1.0f }; // Ciepły, mocny żółty
+        GLfloat col[] = { 1.0f, 0.9f, 0.6f, 1.0f }; 
         glLightfv(GL_LIGHT1 + i, GL_POSITION, pos);
         glLightfv(GL_LIGHT1 + i, GL_DIFFUSE, col);
-
-        // Zmniejszanie mocy światła wraz z odległością (żeby auto mijało latarnie)
         glLightf(GL_LIGHT1 + i, GL_CONSTANT_ATTENUATION, 1.0f);
         glLightf(GL_LIGHT1 + i, GL_LINEAR_ATTENUATION, 0.05f);
         glLightf(GL_LIGHT1 + i, GL_QUADRATIC_ATTENUATION, 0.001f);
     }
 
-    // Ruszamy auto w odpowiednie miejsce
     glPushMatrix();
     glTranslatef(autoGracza.x, autoGracza.y, autoGracza.z);
     float katSkretu = speed_x * 15.0f;
@@ -252,19 +242,14 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 
     glPopMatrix();
 
-    // Po narysowaniu auta wyłączamy latarnie
     for (int i = 0; i < globalLightCount && i < 7; i++) {
         glDisable(GL_LIGHT1 + i);
     }
 
-    // Włączamy słońce z powrotem dla reszty świata!
     glEnable(GL_LIGHT0);
     glDisable(GL_NORMALIZE);
     glDisable(GL_LIGHTING);
 
-    // ==================================================
-    // RYSOWANIE AUT NPC
-    // ==================================================
     for (int i = 0; i < inneAuta.size(); i++) {
         glPushMatrix();
         glTranslatef(inneAuta[i].x, inneAuta[i].y + 0.1f, inneAuta[i].z);
@@ -430,6 +415,7 @@ int main(void)
                 speed_y = 0;
                 glClearColor(0.8f, 0.1f, 0.1f, 1.0f);
                 autoGracza.indicatorMode = 3;
+                PlaySound(TEXT("crash.wav"), NULL, SND_FILENAME | SND_ASYNC);
             }
         }
 
