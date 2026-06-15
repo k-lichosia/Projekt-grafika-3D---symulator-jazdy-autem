@@ -151,7 +151,6 @@ void initOpenGLProgram(GLFWwindow* window) {
         printf("UWAGA: Tekstura nieba nie zostala wczytana!\n");
     }
 
-    //glBindTexture(GL_TEXTURE_2D, texChodnik);
     glBindTexture(GL_TEXTURE_2D, texSky);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -203,6 +202,7 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
     spMap->use();
     glUniformMatrix4fv(spMap->u("P"), 1, false, glm::value_ptr(P));
     glUniformMatrix4fv(spMap->u("V"), 1, false, glm::value_ptr(V));
+    glUniform1i(spMap->u("isCrashedStatus"), isCrashed ? 1 : 0); 
 
     glm::vec3 globalLampPositions[10];
     int globalLightCount = 0;

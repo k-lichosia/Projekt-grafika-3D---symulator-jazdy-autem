@@ -21,17 +21,17 @@ uniform int useTexture;
 uniform int currentLayer;
 uniform int totalLayers;
 
-void main() {
-    // Obliczamy wektor normalny powierzchni
-    vec3 normal = normalize(cross(dFdx(fragPos.xyz), dFdy(fragPos.xyz)));
+uniform int isCrashedStatus;
 
+void main() {
+    vec3 normal = normalize(cross(dFdx(fragPos.xyz), dFdy(fragPos.xyz)));
     vec3 baseColor;
     float alpha = 1.0;
 
     if (useTexture == 1) {
         // Zwykle tekstrurowanie (np. chodnik z iTexCoord)
         vec4 texColor = texture(tex, iTexCoord);
-        baseColor = texColor.rgb;
+        baseColor = texColor.rgb * 0.7;
         alpha = texColor.a;
     }
     else if (useTexture == 2) {
@@ -49,12 +49,12 @@ void main() {
         
         float grain = (texColor.r + texColor.g + texColor.b) / 3.0;
         float textureImpact = pow(grain, 1.1) * 1.3;
-        baseColor = adjustedBase * textureImpact;
+        baseColor = adjustedBase * textureImpact * 0.75;
         alpha = vColor.a;
     }
     else if (useTexture == 3) {
         if (abs(normal.y) > 0.7) {
-            baseColor = vec3(0.35, 0.35, 0.37); // Dach
+            baseColor = vec3(0.2, 0.2, 0.22); // Dach
         }
         else {
             vec2 buildingUV;
@@ -63,7 +63,7 @@ void main() {
             } else {
                 buildingUV = localPos.xy * 1.8;
             }
-            baseColor = texture(tex, buildingUV).rgb;
+            baseColor = texture(tex, buildingUV).rgb * 0.65;
         }
         alpha = 1.0;
     }
@@ -73,36 +73,34 @@ void main() {
         vec4 texColor = texture(tex, grassUV);
         
         // Soczysty, jasny kolor trawy dopasowany do sceny nocnej
-        baseColor = texColor.rgb * 1.5;
+        baseColor = texColor.rgb * 0.6;
         alpha = 1.0;
     }
     else if (useTexture == 5) {
         float u = atan(localPos.z, localPos.x) / (2.0 * 3.14159) + 0.5;
         float v = localPos.y + 0.5;
 
-        // Powtarzamy niebo 4 razy wokol osi
         float scaledU = u * 4.0;
         float wrapU = fract(scaledU); 
         
-        // 1. Pobieramy normalny obrazek
         vec3 color1 = textureLod(tex, vec2(wrapU, v), 0.0).rgb;
-        
-        // 2. Pobieramy z przesunieciem o polowe (omijamy krawedz)
         vec3 color2 = textureLod(tex, vec2(fract(wrapU + 0.5), v), 0.0).rgb;
         
-        // 3. Sprawdzamy jak blisko krawedzi (szwu) jestesmy
         float distToSeam = abs(wrapU - 0.5) * 2.0;
-        
-        // 4. Tworzymy plynne przejscie miedzy jednym a drugim
         float blend = smoothstep(0.4, 0.6, distToSeam);
         
-        // 5. Miksujemy kolory - krawedz znika!
         baseColor = mix(color1, color2, blend);
+
+        if (isCrashedStatus == 1) {
+            // Mieszamy oryginalne gwiazdy z mocnym czerwonym kolorem (70% czerwieni, 30% gwiazd)
+            baseColor = mix(baseColor, vec3(0.9, 0.1, 0.1), 0.3);
+        }
+
         alpha = 1.0;
     }
     else {
         // Brak tekstury (czysty kolor wierzcholkow)
-        baseColor = vColor.rgb;
+        baseColor = vColor.rgb * 0.8;
         alpha = vColor.a;
     }
 
