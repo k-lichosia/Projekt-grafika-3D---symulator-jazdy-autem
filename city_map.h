@@ -10,6 +10,7 @@ GLuint texChodnik;
 GLuint texAsphalt;
 GLuint texBuilding;
 GLuint texGrass;
+extern GLuint texSky;  
 
 // Uniwersalna funkcja do rysowania
 void drawSimple(ShaderProgram* sp, float* verts, float* colors, int vertexCount, bool useUV = false) {
@@ -139,6 +140,25 @@ void renderCity(ShaderProgram* sp, float offset, glm::vec3* outLightPositions = 
 
 	glUniform3fv(sp->u("lightPositions"), lightCount, glm::value_ptr(lampPositions[0]));
 	glUniform1i(sp->u("lightCount"), lightCount);
+
+	// ====================================================================
+	// --- 0. NIEBO (GIGANTYCZNY SKYBOX) ---
+	// ====================================================================
+	glDepthMask(GL_FALSE); // Wyłączamy głębię, żeby niebo zawsze było "za" miastem
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texSky);
+	glUniform1i(sp->u("tex"), 0);
+	glUniform1i(sp->u("useTexture"), 5); // Numer 5 to będzie nasz kod na niebo w shaderze
+
+	// Tworzymy wielką kostkę o boku 190.0f (nasze pole widzenia kamery ma 200.0f)
+	glm::mat4 M_sky = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+	M_sky = glm::scale(M_sky, glm::vec3(190.0f, 190.0f, 190.0f));
+	glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M_sky));
+
+	drawSimple(sp, unitCube, NULL, 36);
+
+	glDepthMask(GL_TRUE); // Włączamy z powrotem głębię dla budynków i drogi!
 
 	// 3. G£ÓWNA PÊTLA RYSOWANIA (Dwa bloki miasta dla p³ynnoœci ruchu)
 	for (int block = 0; block < 2; block++) {

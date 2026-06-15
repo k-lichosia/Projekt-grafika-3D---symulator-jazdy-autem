@@ -1,25 +1,25 @@
 #version 330 core
 
-// Dane wejœciowe z Vertex Shadera (musz¹ idealnie pasowaæ do v_map.glsl)
+// Dane wejsciowe z Vertex Shadera (musza idealnie pasowac do v_map.glsl)
 in vec4 vColor;
 in vec4 fragPos;
-in vec2 iTexCoord; 
+in vec2 iTexCoord;
 in vec3 localPos;
-in float Height; // <-- DODANE: Odbieramy wysokoœæ warstwy (0.0 do 1.0)
+in float Height; // <-- Odbieramy wysokosc warstwy (0.0 do 1.0)
 
 out vec4 pixelColor;
 
-// Dane o œwiat³ach
+// Dane o swiatlach
 uniform vec3 lightPositions[10];
 uniform int lightCount;
 
-// Obs³uga tekstury
-uniform sampler2D tex;  
-uniform int useTexture; 
+// ObsÅ‚uga tekstury
+uniform sampler2D tex;
+uniform int useTexture;
 
-// --- DODANE UNIFORMY DO OBS£UGI WARSTW ---
-uniform int currentLayer;   
-uniform int totalLayers;    
+// --- UNIFORMY DO OBSLUGI WARSTW ---
+uniform int currentLayer;
+uniform int totalLayers;
 
 void main() {
     // Obliczamy wektor normalny powierzchni
@@ -29,20 +29,20 @@ void main() {
     float alpha = 1.0;
 
     if (useTexture == 1) {
-        // Zwyk³e tekstrurowanie (np. chodnik z iTexCoord)
+        // Zwykle tekstrurowanie (np. chodnik z iTexCoord)
         vec4 texColor = texture(tex, iTexCoord);
         baseColor = texColor.rgb;
         alpha = texColor.a;
-    } 
+    }
     else if (useTexture == 2) {
         // Mapowanie UV dla tekstury asfaltu
         vec2 autoUV = localPos.xz * 0.4;
         vec4 texColor = texture(tex, autoUV);
         
-        // Wykrywamy podbudowê asfaltu (ciemne wierzcho³ki)
+        // Wykrywamy podbudowe asfaltu (ciemne wierzcholki)
         vec3 adjustedBase;
         if (vColor.r < 0.2 && vColor.g < 0.2) {
-            adjustedBase = vec3(0.42, 0.43, 0.45); 
+            adjustedBase = vec3(0.42, 0.43, 0.45);
         } else {
             adjustedBase = vColor.rgb;
         }
@@ -55,41 +55,62 @@ void main() {
     else if (useTexture == 3) {
         if (abs(normal.y) > 0.7) {
             baseColor = vec3(0.35, 0.35, 0.37); // Dach
-        } 
+        }
         else {
             vec2 buildingUV;
             if (abs(normal.x) > 0.5) {
-                buildingUV = localPos.zy * 1.8; 
+                buildingUV = localPos.zy * 1.8;
             } else {
-                buildingUV = localPos.xy * 1.8; 
+                buildingUV = localPos.xy * 1.8;
             }
             baseColor = texture(tex, buildingUV).rgb;
         }
         alpha = 1.0;
     }
-    // ====================================================================
-    // --- ZMODYFIKOWANA SEKCJA 4: TRÓJWYMIAROWA TRAWA WARSTWOWA ---
-    // ====================================================================
-else if (useTexture == 4) {
-        // Skalujemy teksturê na bazie pozycji œwiata, by kêpki by³y drobne i gêste
-        vec2 grassUV = localPos.xz * 2.5; 
+    else if (useTexture == 4) {
+        // Skalujemy teksture na bazie pozycji swiata, by kepki byly drobne i geste
+        vec2 grassUV = localPos.xz * 2.5;
         vec4 texColor = texture(tex, grassUV);
         
         // Soczysty, jasny kolor trawy dopasowany do sceny nocnej
-        baseColor = texColor.rgb * 1.5; 
+        baseColor = texColor.rgb * 1.5;
+        alpha = 1.0;
+    }
+    else if (useTexture == 5) {
+        float u = atan(localPos.z, localPos.x) / (2.0 * 3.14159) + 0.5;
+        float v = localPos.y + 0.5;
+
+        // Powtarzamy niebo 4 razy wokol osi
+        float scaledU = u * 4.0;
+        float wrapU = fract(scaledU); 
+        
+        // 1. Pobieramy normalny obrazek
+        vec3 color1 = textureLod(tex, vec2(wrapU, v), 0.0).rgb;
+        
+        // 2. Pobieramy z przesunieciem o polowe (omijamy krawedz)
+        vec3 color2 = textureLod(tex, vec2(fract(wrapU + 0.5), v), 0.0).rgb;
+        
+        // 3. Sprawdzamy jak blisko krawedzi (szwu) jestesmy
+        float distToSeam = abs(wrapU - 0.5) * 2.0;
+        
+        // 4. Tworzymy plynne przejscie miedzy jednym a drugim
+        float blend = smoothstep(0.4, 0.6, distToSeam);
+        
+        // 5. Miksujemy kolory - krawedz znika!
+        baseColor = mix(color1, color2, blend);
         alpha = 1.0;
     }
     else {
-        // Brak tekstury (czysty kolor wierzcho³ków)
+        // Brak tekstury (czysty kolor wierzcholkow)
         baseColor = vColor.rgb;
         alpha = vColor.a;
     }
 
-    // Ambient - delikatne œwiat³o sta³e sceny
-    vec3 ambient = 0.55 * baseColor; 
+    // Ambient - delikatne swiatlo stale sceny
+    vec3 ambient = 0.55 * baseColor;
     vec3 diffuseAccumulator = vec3(0.0);
 
-    // Pêtla obliczaj¹ca œwiat³o od ka¿dej latarni miejskiej
+    // Petla obliczajaca swiatlo od kazdej latarni miejskiej
     for(int i = 0; i < lightCount; i++) {
         vec3 lightDir = normalize(lightPositions[i] - fragPos.xyz);
         float diff = max(dot(normal, lightDir), 0.0);
@@ -101,10 +122,13 @@ else if (useTexture == 4) {
     }
 
     // Ostateczne wyznaczenie koloru piksela
-    if (vColor.r > 0.9 && vColor.g > 0.8 && useTexture == 0) {
-        pixelColor = vColor;
+    if (useTexture == 5){
+        pixelColor = vec4(baseColor, alpha);
+    }
+    else if (vColor.r > 0.9 && vColor.g > 0.8 && useTexture == 0) {
+        pixelColor = vec4(vColor.rgb, vColor.a);
     } else {
-        // Dla trawy mieszamy œwiat³o latarni z rozjaœnion¹ baz¹ warstwow¹
+        // Dla trawy mieszamy swiatlo latarni z rozjasniona baza warstwowa
         pixelColor = vec4((ambient + diffuseAccumulator) * baseColor, alpha);
     }
 }

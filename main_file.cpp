@@ -43,6 +43,7 @@ ObjModel modelSamochodu;
 extern GLuint texAsphalt;
 extern GLuint texBuilding;
 extern GLuint texGrass;
+GLuint texSky;
 
 bool isCrashed = false;
 int cameraMode = 0; // 0 = TPP, 1 = Lot Ptaka, 2 = Pierwsza osoba
@@ -140,14 +141,20 @@ void initOpenGLProgram(GLFWwindow* window) {
     texAsphalt = readTexture("asfalt.png");
     texBuilding = readTexture("kamienica.png");
     texGrass = readTexture("trawa.png");
+    texSky = readTexture("niebo.png");
 
     if (texChodnik == 0) {
         printf("UWAGA: Tekstura nie zostala wczytana!\n");
     }
 
-    glBindTexture(GL_TEXTURE_2D, texChodnik);
+    if (texSky == 0) {
+        printf("UWAGA: Tekstura nieba nie zostala wczytana!\n");
+    }
+
+    //glBindTexture(GL_TEXTURE_2D, texChodnik);
+    glBindTexture(GL_TEXTURE_2D, texSky);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 }
 
 void freeOpenGLProgram(GLFWwindow* window) {
