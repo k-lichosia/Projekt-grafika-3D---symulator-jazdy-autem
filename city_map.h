@@ -6,362 +6,343 @@
 #include "shaderprogram.h"
 #include "tree_model.h"
 
+// =======================================================================
+// --- ZMIENNE GLOBALNE I TEKSTURY ---
+// =======================================================================
 GLuint texChodnik;
 GLuint texAsphalt;
 GLuint texBuilding;
 GLuint texGrass;
-extern GLuint texSky;  
+extern GLuint texSky;
 
-// Uniwersalna funkcja do rysowania
+// =======================================================================
+// --- FUNKCJE POMOCNICZE (RYSOWANIE I KOLORY) ---
+// =======================================================================
+
+// Uniwersalna funkcja do rysowania geometrii (z teksturami lub bez)
 void drawSimple(ShaderProgram* sp, float* verts, float* colors, int vertexCount, bool useUV = false) {
-	int vPos = sp->a("vertex");
-	int cPos = sp->a("color");
-	int tPos = sp->a("texCoord"); // Pobierz lokalizacjê UV z shadera
+    int vPos = sp->a("vertex");
+    int cPos = sp->a("color");
+    int tPos = sp->a("texCoord");
 
-	if (useUV) {
-		// Czytamy z tablicy: [x,y,z,w, u,v] -> krok 6 floatów
-		glVertexAttribPointer(vPos, 4, GL_FLOAT, GL_FALSE, 6 * sizeof(float), verts);
-		glEnableVertexAttribArray(vPos);
+    if (useUV) {
+        // Czytamy z tablicy: [x,y,z,w, u,v] -> krok 6 floatow
+        glVertexAttribPointer(vPos, 4, GL_FLOAT, GL_FALSE, 6 * sizeof(float), verts);
+        glEnableVertexAttribArray(vPos);
 
-		// UV zaczynaj¹ siê po 4 floatach pozycji
-		if (tPos != -1) {
-			glVertexAttribPointer(tPos, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), verts + 4);
-			glEnableVertexAttribArray(tPos);
-		}
-		glDisableVertexAttribArray(cPos); // Wy³¹cz kolor, gdy jest tekstura
-	}
-	else {
-		// Standardowe rysowanie (krok 0, bo verts i colors s¹ osobno)
-		glVertexAttribPointer(vPos, 4, GL_FLOAT, GL_FALSE, 0, verts);
-		glEnableVertexAttribArray(vPos);
+        // UV zaczynaja sie po 4 floatach pozycji
+        if (tPos != -1) {
+            glVertexAttribPointer(tPos, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), verts + 4);
+            glEnableVertexAttribArray(tPos);
+        }
+        glDisableVertexAttribArray(cPos); // Wylaczamy kolor, gdy jest tekstura
+    }
+    else {
+        // Standardowe rysowanie
+        glVertexAttribPointer(vPos, 4, GL_FLOAT, GL_FALSE, 0, verts);
+        glEnableVertexAttribArray(vPos);
 
-		if (colors != nullptr) {
-			glVertexAttribPointer(cPos, 4, GL_FLOAT, GL_FALSE, 0, colors);
-			glEnableVertexAttribArray(cPos);
-		}
-		if (tPos != -1) glDisableVertexAttribArray(tPos);
-	}
+        if (colors != nullptr) {
+            glVertexAttribPointer(cPos, 4, GL_FLOAT, GL_FALSE, 0, colors);
+            glEnableVertexAttribArray(cPos);
+        }
+        if (tPos != -1) glDisableVertexAttribArray(tPos);
+    }
 
-	glDrawArrays(GL_TRIANGLES, 0, vertexCount);
+    glDrawArrays(GL_TRIANGLES, 0, vertexCount);
 
-	glDisableVertexAttribArray(vPos);
-	if (cPos != -1) glDisableVertexAttribArray(cPos);
-	if (tPos != -1) glDisableVertexAttribArray(tPos);
+    glDisableVertexAttribArray(vPos);
+    if (cPos != -1) glDisableVertexAttribArray(cPos);
+    if (tPos != -1) glDisableVertexAttribArray(tPos);
 }
 
+// Generuje kolory dla drzew na podstawie wysokosci wierzcholkow
 float* getTreeColors(int count, float* verts) {
-	static float* colors = nullptr;
-	if (colors == nullptr) {
-		colors = new float[count * 4];
-		for (int i = 0; i < count; i++) {
-			float y = verts[i * 4 + 1]; // To jest wysokoœæ wierzcho³ka
+    static float* colors = nullptr;
+    if (colors == nullptr) {
+        colors = new float[count * 4];
+        for (int i = 0; i < count; i++) {
+            float y = verts[i * 4 + 1];
 
-			// POPRAWKA: Zwiêkszamy próg do 85.0f
-			if (y < 85.0f) {
-				colors[i * 4 + 0] = 0.35f; // R (Br¹zowy)
-				colors[i * 4 + 1] = 0.20f; // G
-				colors[i * 4 + 2] = 0.10f; // B
-			}
-			else {
-				colors[i * 4 + 0] = 0.05f; // R (Ciemniejszy zielony)
-				colors[i * 4 + 1] = 0.35f; // G
-				colors[i * 4 + 2] = 0.05f; // B
-			}
-			colors[i * 4 + 3] = 1.0f;
-		}
-	}
-	return colors;
+            if (y < 85.0f) {
+                colors[i * 4 + 0] = 0.35f; // R (Brazowy pien)
+                colors[i * 4 + 1] = 0.20f; // G
+                colors[i * 4 + 2] = 0.10f; // B
+            }
+            else {
+                colors[i * 4 + 0] = 0.05f; // R (Zielona korona)
+                colors[i * 4 + 1] = 0.35f; // G
+                colors[i * 4 + 2] = 0.05f; // B
+            }
+            colors[i * 4 + 3] = 1.0f;
+        }
+    }
+    return colors;
 }
 
+// Ciemnoszary kolor dla slupow latarni
 float* getLampColors() {
-	static float colors[36 * 4];
-	for (int i = 0; i < 36; i++) {
-		colors[i * 4 + 0] = 0.2f; colors[i * 4 + 1] = 0.2f; colors[i * 4 + 2] = 0.2f; colors[i * 4 + 3] = 1.0f;
-	}
-	return colors;
+    static float colors[36 * 4];
+    for (int i = 0; i < 36; i++) {
+        colors[i * 4 + 0] = 0.2f; colors[i * 4 + 1] = 0.2f; colors[i * 4 + 2] = 0.2f; colors[i * 4 + 3] = 1.0f;
+    }
+    return colors;
 }
 
+// Jasnozolty kolor dla zrodel swiatla w latarniach
 float* getLampLightColors() {
-	static float colors[36 * 4];
-	for (int i = 0; i < 36; i++) {
-		colors[i * 4 + 0] = 1.0f; colors[i * 4 + 1] = 1.0f; colors[i * 4 + 2] = 0.8f; colors[i * 4 + 3] = 1.0f;
-	}
-	return colors;
+    static float colors[36 * 4];
+    for (int i = 0; i < 36; i++) {
+        colors[i * 4 + 0] = 1.0f; colors[i * 4 + 1] = 1.0f; colors[i * 4 + 2] = 0.8f; colors[i * 4 + 3] = 1.0f;
+    }
+    return colors;
 }
 
+// Kolor podbudowy krawedznika
 float* getCustomCurbColor(float brightness) {
-	static float colors[36 * 4];
-	for (int i = 0; i < 36; i++) {
-		colors[i * 4 + 0] = brightness; // R
-		colors[i * 4 + 1] = brightness; // G
-		colors[i * 4 + 2] = brightness; // B
-		colors[i * 4 + 3] = 1.0f;       // A 
-	}
-	return colors;
+    static float colors[36 * 4];
+    for (int i = 0; i < 36; i++) {
+        colors[i * 4 + 0] = brightness;
+        colors[i * 4 + 1] = brightness;
+        colors[i * 4 + 2] = brightness;
+        colors[i * 4 + 3] = 1.0f;
+    }
+    return colors;
 }
+
+// =======================================================================
+// --- GLOWNA FUNKCJA BUDUJUCA MIASTO ---
+// =======================================================================
 
 void renderCity(ShaderProgram* sp, float offset, glm::vec3* outLightPositions = nullptr, int* outLightCount = nullptr) {
-	glm::mat4 M;
+    glm::mat4 M;
 
-	// 1. OBLICZENIA WSTÊPNE
-	float roadOffset = fmod(offset, 100.0f);
-	int treeVertexCount = sizeof(treeVertices) / (4 * sizeof(float));
-	float* tCols = getTreeColors(treeVertexCount, treeVertices);
+    // ------------------------------------------
+    // 1. OBLICZENIA WSTEPNE
+    // ------------------------------------------
+    float roadOffset = fmod(offset, 100.0f);
+    int treeVertexCount = sizeof(treeVertices) / (4 * sizeof(float));
+    float* tCols = getTreeColors(treeVertexCount, treeVertices);
 
-	// Parametry uk³adu (Z³oty œrodek)
-	float roadEdge = 6.0f;
-	float sidewalkW = 8.0f;
-	float foundationW = 30.0f;
-	float buildingX = 14.0f;
+    // Wymiary elementow drogi
+    float roadEdge = 6.0f;
+    float sidewalkW = 8.0f;
+    float foundationW = 30.0f;
+    float buildingX = 14.0f;
 
-	float whiteStripe[] = { 0.9f, 0.9f, 0.8f, 1.0f, 0.9f, 0.9f, 0.8f, 1.0f, 0.9f, 0.9f, 0.8f, 1.0f,
-							0.9f, 0.9f, 0.8f, 1.0f, 0.9f, 0.9f, 0.8f, 1.0f, 0.9f, 0.9f, 0.8f, 1.0f };
+    float whiteStripe[] = { 0.9f, 0.9f, 0.8f, 1.0f, 0.9f, 0.9f, 0.8f, 1.0f, 0.9f, 0.9f, 0.8f, 1.0f,
+                            0.9f, 0.9f, 0.8f, 1.0f, 0.9f, 0.9f, 0.8f, 1.0f, 0.9f, 0.9f, 0.8f, 1.0f };
 
-	// 2. PRZYGOTOWANIE ŒWIATE£ (Uniformy)
-	glm::vec3 lampPositions[10];
-	int lightCount = 0;
-	for (int b = 0; b < 2; b++) {
-		float s = (b * 100.0f) - roadOffset;
-		for (int i = 0; i < 100; i += 30) {
-			if (lightCount < 10) {
-				lampPositions[lightCount] = glm::vec3(roadEdge - 0.4f, 5.0f, s + (float)i);
-				if (outLightPositions != nullptr) {
-					outLightPositions[lightCount] = lampPositions[lightCount];
-				}
+    // ------------------------------------------
+    // 2. PRZYGOTOWANIE SWIATEL LATARNI
+    // ------------------------------------------
+    glm::vec3 lampPositions[10];
+    int lightCount = 0;
 
-				lightCount++;
-			}
-		}
-	}
+    for (int b = 0; b < 2; b++) {
+        float s = (b * 100.0f) - roadOffset;
+        for (int i = 0; i < 100; i += 30) {
+            if (lightCount < 10) {
+                lampPositions[lightCount] = glm::vec3(roadEdge - 0.4f, 5.0f, s + (float)i);
 
-	if (outLightCount != nullptr) {
-		*outLightCount = lightCount;
-	}
+                // Zapisujemy pozycje swiatel na zewnatrz (dla aut NPC i Gracza)
+                if (outLightPositions != nullptr) {
+                    outLightPositions[lightCount] = lampPositions[lightCount];
+                }
+                lightCount++;
+            }
+        }
+    }
 
-	glUniform3fv(sp->u("lightPositions"), lightCount, glm::value_ptr(lampPositions[0]));
-	glUniform1i(sp->u("lightCount"), lightCount);
+    if (outLightCount != nullptr) {
+        *outLightCount = lightCount;
+    }
 
-	// ====================================================================
-	// --- 0. NIEBO (GIGANTYCZNY SKYBOX) ---
-	// ====================================================================
-	glDepthMask(GL_FALSE); // Wyłączamy głębię, żeby niebo zawsze było "za" miastem
+    glUniform3fv(sp->u("lightPositions"), lightCount, glm::value_ptr(lampPositions[0]));
+    glUniform1i(sp->u("lightCount"), lightCount);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texSky);
-	glUniform1i(sp->u("tex"), 0);
-	glUniform1i(sp->u("useTexture"), 5); // Numer 5 to będzie nasz kod na niebo w shaderze
+    // ------------------------------------------
+    // 3. NIEBO (SKYBOX)
+    // ------------------------------------------
+    glDepthMask(GL_FALSE); // Wylaczamy glebie, zeby niebo zawsze bylo "za" miastem
 
-	// Tworzymy wielką kostkę o boku 190.0f (nasze pole widzenia kamery ma 200.0f)
-	glm::mat4 M_sky = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
-	M_sky = glm::scale(M_sky, glm::vec3(190.0f, 190.0f, 190.0f));
-	glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M_sky));
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texSky);
+    glUniform1i(sp->u("tex"), 0);
+    glUniform1i(sp->u("useTexture"), 5); // 5 to nasz tryb dla nieba
 
-	drawSimple(sp, unitCube, NULL, 36);
+    // Tworzymy wielka kostke o boku 190.0f
+    glm::mat4 M_sky = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+    M_sky = glm::scale(M_sky, glm::vec3(190.0f, 190.0f, 190.0f));
+    glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M_sky));
 
-	glDepthMask(GL_TRUE); // Włączamy z powrotem głębię dla budynków i drogi!
+    drawSimple(sp, unitCube, NULL, 36);
+    glDepthMask(GL_TRUE); // Wlaczamy glebie z powrotem dla reszty swiata
 
-	// 3. G£ÓWNA PÊTLA RYSOWANIA (Dwa bloki miasta dla p³ynnoœci ruchu)
-	for (int block = 0; block < 2; block++) {
-		float shift = (block * 100.0f) - roadOffset;
+    // ------------------------------------------
+    // 4. GLOWNA PETLA RYSOWANIA MIASTA (Dwa obiekty na raz dla plynnosci)
+    // ------------------------------------------
+    for (int block = 0; block < 2; block++) {
+        float shift = (block * 100.0f) - roadOffset;
 
-		// ====================================================================
-		// --- B1. JEZDNIA (ZAAWANSOWANE NAK£ADANIE STRUKTURY) ---
-		// ====================================================================
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texAsphalt);
-		glUniform1i(sp->u("tex"), 0);
-		glUniform1i(sp->u("useTexture"), 2);
+        // --- A. JEZDNIA ---
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texAsphalt);
+        glUniform1i(sp->u("tex"), 0);
+        glUniform1i(sp->u("useTexture"), 2);
 
-		M = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, shift));
-		glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+        M = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, shift));
+        glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
 
-		float texturedRoadVertices[] = {
-			-6.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-			 6.0f, 0.0f, 0.0f, 1.0f, 3.0f, 0.0f,
-			 6.0f, 0.0f, 100.0f, 1.0f, 3.0f, 25.0f,
+        float texturedRoadVertices[] = {
+            -6.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+             6.0f, 0.0f, 0.0f, 1.0f, 3.0f, 0.0f,
+             6.0f, 0.0f, 100.0f, 1.0f, 3.0f, 25.0f,
 
-			 -6.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-			  6.0f, 0.0f, 100.0f, 1.0f, 3.0f, 25.0f,
-			 -6.0f, 0.0f, 100.0f, 1.0f, 0.0f, 25.0f
-		};
-		drawSimple(sp, texturedRoadVertices, NULL, 6, true);
+            -6.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+             6.0f, 0.0f, 100.0f, 1.0f, 3.0f, 25.0f,
+            -6.0f, 0.0f, 100.0f, 1.0f, 0.0f, 25.0f
+        };
+        drawSimple(sp, texturedRoadVertices, NULL, 6, true);
 
-		// ====================================================================
-		// --- B2. CHODNIKI Z TEKSTUR¥ KOSTKI ---
-		// ====================================================================
-		glUniform1i(sp->u("useTexture"), 1);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texChodnik);
-		glUniform1i(sp->u("tex"), 0);
+        // --- B. CHODNIKI ---
+        glUniform1i(sp->u("useTexture"), 1);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texChodnik);
+        glUniform1i(sp->u("tex"), 0);
 
-		// Prawy chodnik
-		M = glm::translate(glm::mat4(1.0f), glm::vec3(roadEdge, 0.01f, shift));
-		M = glm::scale(M, glm::vec3(sidewalkW, 1.0f, 1.0f));
-		glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
-		drawSimple(sp, sidewalkVertices, NULL, 6, true);
+        // Prawy
+        M = glm::translate(glm::mat4(1.0f), glm::vec3(roadEdge, 0.01f, shift));
+        M = glm::scale(M, glm::vec3(sidewalkW, 1.0f, 1.0f));
+        glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+        drawSimple(sp, sidewalkVertices, NULL, 6, true);
 
-		// Lewy chodnik
-		M = glm::translate(glm::mat4(1.0f), glm::vec3(-roadEdge, 0.01f, shift));
-		M = glm::scale(M, glm::vec3(-sidewalkW, 1.0f, 1.0f));
-		glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
-		drawSimple(sp, sidewalkVertices, NULL, 6, true);
+        // Lewy
+        M = glm::translate(glm::mat4(1.0f), glm::vec3(-roadEdge, 0.01f, shift));
+        M = glm::scale(M, glm::vec3(-sidewalkW, 1.0f, 1.0f));
+        glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+        drawSimple(sp, sidewalkVertices, NULL, 6, true);
 
-		// ====================================================================
-		// --- B3. KRAWÊ¯NIKI ---
-		// ====================================================================
-		glUniform1i(sp->u("useTexture"), 0);
-		glUniform1i(sp->u("lightCount"), lightCount);
+        // --- C. KRAWEDZNIKI ---
+        glUniform1i(sp->u("useTexture"), 0);
+        glUniform1i(sp->u("lightCount"), lightCount);
 
-		// Prawy krawê¿nik
-		M = glm::translate(glm::mat4(1.0f), glm::vec3(roadEdge + 0.1f, 0.17f, shift + 50.0f));
-		M = glm::scale(M, glm::vec3(0.2f, 0.35f, 100.0f));
-		glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
-		drawSimple(sp, unitCube, NULL, 36);
+        // Prawy
+        M = glm::translate(glm::mat4(1.0f), glm::vec3(roadEdge + 0.1f, 0.17f, shift + 50.0f));
+        M = glm::scale(M, glm::vec3(0.2f, 0.35f, 100.0f));
+        glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+        drawSimple(sp, unitCube, NULL, 36);
 
-		// Lewy krawê¿nik
-		M = glm::translate(glm::mat4(1.0f), glm::vec3(-roadEdge - 0.1f, 0.17f, shift + 50.0f));
-		M = glm::scale(M, glm::vec3(0.2f, 0.35f, 100.0f));
-		glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
-		drawSimple(sp, unitCube, NULL, 36);
+        // Lewy
+        M = glm::translate(glm::mat4(1.0f), glm::vec3(-roadEdge - 0.1f, 0.17f, shift + 50.0f));
+        M = glm::scale(M, glm::vec3(0.2f, 0.35f, 100.0f));
+        glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+        drawSimple(sp, unitCube, NULL, 36);
 
-		glUniform1i(sp->u("useTexture"), 0);
+        // --- D. ZAPLECZE / FUNDAMENTY MIASTA ---
+        M = glm::translate(glm::mat4(1.0f), glm::vec3(buildingX, 0.005f, shift));
+        M = glm::scale(M, glm::vec3(foundationW, 1.0f, 1.0f));
+        glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+        drawSimple(sp, foundationVertices, foundationColors, 6);
 
-		// ====================================================================
-		// --- C. ZAPLECZE / FUNDAMENTY (Bez faktury) ---
-		// ====================================================================
-		// Prawy
-		M = glm::translate(glm::mat4(1.0f), glm::vec3(buildingX, 0.005f, shift));
-		M = glm::scale(M, glm::vec3(foundationW, 1.0f, 1.0f));
-		glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
-		drawSimple(sp, foundationVertices, foundationColors, 6);
+        M = glm::translate(glm::mat4(1.0f), glm::vec3(-buildingX, 0.005f, shift));
+        M = glm::scale(M, glm::vec3(-foundationW, 1.0f, 1.0f));
+        glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+        drawSimple(sp, foundationVertices, foundationColors, 6);
 
-		// Lewy
-		M = glm::translate(glm::mat4(1.0f), glm::vec3(-buildingX, 0.005f, shift));
-		M = glm::scale(M, glm::vec3(-foundationW, 1.0f, 1.0f));
-		glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
-		drawSimple(sp, foundationVertices, foundationColors, 6);
+        // --- E. PASY NA DRODZE ---
+        for (int i = 0; i < 100; i += 10) {
+            M = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.02f, shift + (float)i));
+            glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+            drawSimple(sp, stripeVertices, whiteStripe, 6);
+        }
 
-		// ====================================================================
-		// --- D. PASY NA DRODZE ---
-		// ====================================================================
-		for (int i = 0; i < 100; i += 10) {
-			M = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.02f, shift + (float)i));
-			glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
-			drawSimple(sp, stripeVertices, whiteStripe, 6);
-		}
+        // --- F. BUDYNKI ---
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texBuilding);
+        glUniform1i(sp->u("tex"), 0);
+        glUniform1i(sp->u("useTexture"), 3);
 
-		glUniform1i(sp->u("useTexture"), 0);
+        // Lewa strona (co 40 jednostek)
+        for (int i = 0; i < 100; i += 40) {
+            float leftZ = shift + (float)i + 10.0f;
+            M = glm::translate(glm::mat4(1.0f), glm::vec3(-19.0f, 0.0f, leftZ));
+            M = glm::scale(M, glm::vec3(10.0f, 20.0f, 10.0f));
+            glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+            drawSimple(sp, unitCube, buildingColors, 36);
+        }
 
-		// ====================================================================
-		// --- E. BUDYNKI (Rzadsze i asymetryczne) ---
-		// ====================================================================
-		// Lewa strona - co 40 jednostek
-		for (int i = 0; i < 100; i += 40) {
-			float leftZ = shift + (float)i + 10.0f;
-			M = glm::translate(glm::mat4(1.0f), glm::vec3(-19.0f, 0.0f, leftZ));
-			M = glm::scale(M, glm::vec3(10.0f, 20.0f, 10.0f));
-			glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+        // Prawa strona (co 55 jednostek)
+        for (int i = 0; i < 100; i += 55) {
+            float rightZ = shift + (float)i + 30.0f;
+            M = glm::translate(glm::mat4(1.0f), glm::vec3(19.0f, 0.0f, rightZ));
+            M = glm::scale(M, glm::vec3(10.0f, 20.0f, 10.0f));
+            glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+            drawSimple(sp, unitCube, buildingColors, 36);
+        }
 
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, texBuilding);
-			glUniform1i(sp->u("tex"), 0);
-			glUniform1i(sp->u("useTexture"), 3);
-			drawSimple(sp, unitCube, buildingColors, 36);
-		}
+        // --- G. DRZEWA ---
+        glUniform1i(sp->u("useTexture"), 0);
 
-		// Prawa strona - co 55 jednostek
-		for (int i = 0; i < 100; i += 55) {
-			float rightZ = shift + (float)i + 30.0f;
-			M = glm::translate(glm::mat4(1.0f), glm::vec3(19.0f, 0.0f, rightZ));
-			M = glm::scale(M, glm::vec3(10.0f, 20.0f, 10.0f));
-			glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+        for (int i = 0; i < 100; i += 45) {
+            // Prawa strona
+            M = glm::translate(glm::mat4(1.0f), glm::vec3(10.0f, 0.0f, shift + i + 5.0f));
+            M = glm::scale(M, glm::vec3(0.02f, 0.02f, 0.02f));
+            glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+            drawSimple(sp, treeVertices, tCols, treeVertexCount);
 
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, texBuilding);
-			glUniform1i(sp->u("tex"), 0);
-			glUniform1i(sp->u("useTexture"), 3);
-			drawSimple(sp, unitCube, buildingColors, 36);
-		}
+            // Lewa strona
+            M = glm::translate(glm::mat4(1.0f), glm::vec3(-10.0f, 0.0f, shift + i + 25.0f));
+            M = glm::scale(M, glm::vec3(0.02f, 0.02f, 0.02f));
+            glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+            drawSimple(sp, treeVertices, tCols, treeVertexCount);
+        }
 
-		// ====================================================================
-		// --- F. DRZEWA (Bardziej rozproszone) ---
-		// ====================================================================
-		for (int i = 0; i < 100; i += 45) {
-			// Drzewo Prawe
-			M = glm::translate(glm::mat4(1.0f), glm::vec3(10.0f, 0.0f, shift + i + 5.0f));
-			M = glm::scale(M, glm::vec3(0.02f, 0.02f, 0.02f));
-			glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
-			glUniform1i(sp->u("useTexture"), 0);
-			drawSimple(sp, treeVertices, tCols, treeVertexCount);
+        // --- H. LATARNIE ---
+        for (int i = 0; i < 100; i += 30) {
+            float lampX = roadEdge;
+            float lampZ = shift + (float)i;
 
-			// Drzewo Lewe
-			M = glm::translate(glm::mat4(1.0f), glm::vec3(-10.0f, 0.0f, shift + i + 25.0f));
-			M = glm::scale(M, glm::vec3(0.02f, 0.02f, 0.02f));
-			glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
-			glUniform1i(sp->u("useTexture"), 0);
-			drawSimple(sp, treeVertices, tCols, treeVertexCount);
-		}
+            // Slup latarni
+            M = glm::translate(glm::mat4(1.0f), glm::vec3(lampX, 2.5f, lampZ));
+            M = glm::scale(M, glm::vec3(0.15f, 5.0f, 0.15f));
+            glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+            drawSimple(sp, unitCube, getLampColors(), 36);
 
-		// ====================================================================
-		// --- G. LATARNIE ---
-		// ====================================================================
-		for (int i = 0; i < 100; i += 30) {
-			float lampX = roadEdge;
-			float lampZ = shift + (float)i;
+            // Glowica emitujaca swiatlo
+            M = glm::translate(glm::mat4(1.0f), glm::vec3(lampX - 0.4f, 5.0f, lampZ));
+            M = glm::scale(M, glm::vec3(0.8f, 0.15f, 0.2f));
+            glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
+            drawSimple(sp, unitCube, getLampLightColors(), 36);
+        }
 
-			// S³up
-			M = glm::translate(glm::mat4(1.0f), glm::vec3(lampX, 2.5f, lampZ));
-			M = glm::scale(M, glm::vec3(0.15f, 5.0f, 0.15f));
-			glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
-			glUniform1i(sp->u("useTexture"), 0);
-			drawSimple(sp, unitCube, getLampColors(), 36);
+        // --- I. TRAWNIKI MIEDZY BUDYNKAMI ---
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texGrass);
+        glUniform1i(sp->u("tex"), 0);
+        glUniform1i(sp->u("useTexture"), 4);
 
-			// G³owica
-			M = glm::translate(glm::mat4(1.0f), glm::vec3(lampX - 0.4f, 5.0f, lampZ));
-			M = glm::scale(M, glm::vec3(0.8f, 0.15f, 0.2f));
-			glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(M));
-			glUniform1i(sp->u("useTexture"), 0);
-			drawSimple(sp, unitCube, getLampLightColors(), 36);
-		}
+        float grassY = 0.02f;
 
-		// ====================================================================
-	// --- ROZSZERZONE TRAWNIKI WZD£U¯ OSI JEZDNI (MIÊDZY BUDYNKAMI) ---
-	// ====================================================================
+        // Lewa strona (Zsynchronizowane z budynkami)
+        for (int i = 0; i < 100; i += 40) {
+            float leftZ = shift + (float)i + 10.0f;
+            glm::mat4 mLeft1 = glm::translate(glm::mat4(1.0f), glm::vec3(-23.0f, grassY, leftZ));
+            mLeft1 = glm::scale(mLeft1, glm::vec3(18.0f, 0.01f, 38.0f));
+            glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(mLeft1));
+            drawSimple(sp, unitCube, NULL, 36);
+        }
 
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texGrass);
-		glUniform1i(sp->u("tex"), 0);
-		glUniform1i(sp->u("useTexture"), 4);
+        // Prawa strona
+        for (int i = 0; i < 100; i += 55) {
+            float rightZ = shift + (float)i + 30.0f;
+            glm::mat4 mRight1 = glm::translate(glm::mat4(1.0f), glm::vec3(23.0f, grassY, rightZ));
+            mRight1 = glm::scale(mRight1, glm::vec3(18.0f, 0.01f, 53.0f));
+            glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(mRight1));
+            drawSimple(sp, unitCube, NULL, 36);
+        }
 
-		float grassY = 0.02f;
+        glUniform1i(sp->u("useTexture"), 0);
 
-		// --- 1. LEWA STRONA ULICY (Pêtla co 40 jednostek) ---
-		for (int i = 0; i < 100; i += 40) {
-			float leftZ = shift + (float)i + 10.0f;
-
-			// Szerokoœæ wraca do 18.0f (czysty styk z chodnikiem), 
-			// ale D£UGOŒÆ zwiêkszamy do 38.0f (zamiast 14.0f).
-			// Poniewa¿ pêtla przeskakuje co 40, trawniki zepn¹ siê w niemal ci¹g³y pas wzd³u¿ drogi!
-			glm::mat4 mLeft1 = glm::translate(glm::mat4(1.0f), glm::vec3(-23.0f, grassY, leftZ));
-			mLeft1 = glm::scale(mLeft1, glm::vec3(18.0f, 0.01f, 38.0f));
-			glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(mLeft1));
-			drawSimple(sp, unitCube, NULL, 36);
-		}
-
-		// --- 2. PRAWA STRONA ULICY (Pêtla co 55 jednostek) ---
-		for (int i = 0; i < 100; i += 55) {
-			float rightZ = shift + (float)i + 30.0f;
-
-			// Szerokoœæ 18.0f, a D£UGOŒÆ zwiêkszamy do 53.0f (zamiast 14.0f).
-			// Budynki po prawej rzadziej siê powtarzaj¹ (co 55), wiêc trawa o d³ugoœci 53 
-			// idealnie wype³ni gigantyczne czarne luki miêdzy nimi wzd³u¿ chodnika.
-			glm::mat4 mRight1 = glm::translate(glm::mat4(1.0f), glm::vec3(23.0f, grassY, rightZ));
-			mRight1 = glm::scale(mRight1, glm::vec3(18.0f, 0.01f, 53.0f));
-			glUniformMatrix4fv(sp->u("M"), 1, GL_FALSE, glm::value_ptr(mRight1));
-			drawSimple(sp, unitCube, NULL, 36);
-		}
-
-		glUniform1i(sp->u("useTexture"), 0);
-
-	} // Koniec pêtli 'block'
-} // Koniec funkcji 'renderCity'
+    }
+}

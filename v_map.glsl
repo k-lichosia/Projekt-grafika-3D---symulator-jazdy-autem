@@ -1,46 +1,53 @@
 #version 330 core
 
-// Atrybuty wejsciowe (musza pasowac do Twojego VBO)
+// =======================================================================
+// --- ZMIENNE WEJSCIOWE (Z BUFOROW VBO) ---
+// =======================================================================
 layout(location = 0) in vec4 vertex;
 layout(location = 1) in vec4 color;
 layout(location = 2) in vec2 texCoord;
 
-// Dane wyjsciowe do Fragment Shadera (f_map.glsl)
+// =======================================================================
+// --- ZMIENNE WYJSCIOWE (DO FRAGMENT SHADERA) ---
+// =======================================================================
 out vec4 vColor;
 out vec4 fragPos; 
 out vec2 iTexCoord;
 out vec3 localPos; 
-out float Height; // <-- TO BYLO POTRZEBNE! Musimy przekazac Height do f_map.glsl
+out float Height; // Wysokosc warstwy dla 3D trawy (od 0.0 do 1.0)
 
-// Macierze transformacji i parametry trawy
+// =======================================================================
+// --- UNIFORMY (MACIERZE I PARAMETRY) ---
+// =======================================================================
 uniform mat4 P;
 uniform mat4 V;
 uniform mat4 M;
-uniform int currentLayer;   // Numer rysowanej warstwy
-uniform int totalLayers;    // Maksymalna liczba warstw (np. 15)
-uniform float grassHeight;  // Wysokosc calej kepki (np. 0.25)
+
+// Parametry warstwowej trawy (Shell Texturing)
+uniform int currentLayer;   // Numer aktualnie rysowanej warstwy
+uniform int totalLayers;    // Maksymalna liczba warstw
+uniform float grassHeight;  // Calkowita wysokosc kepki trawy
 
 void main() {
-    // 1. Zapisujemy czysta pozycje lokalna
+    // 1. Zapisujemy czysta, poczatkowa pozycje lokalna do teksturowania
     localPos = vertex.xyz;
     vColor = color;
     iTexCoord = texCoord;
     
-    // 2. Kopiujemy wierzcholek wejsciowy, zeby moc go zmodyfikowac (podniesc w gore)
+    // 2. Kopiujemy wierzcholek, aby moc go zmodyfikowac (podniesc)
     vec4 displacedPos = vertex; 
     
-    // 3. Obliczamy wysokosc warstwy (0.0 do 1.0)
+    // 3. Obliczamy wysokosc warstwy i przesuwamy wierzcholek do gory (dla trawy)
     if (totalLayers > 0) {
         Height = float(currentLayer) / float(totalLayers);
-        // Podnosimy pionowo wierzcholek w osi Y o odpowiedni ulamek wysokosci
         displacedPos.y += Height * grassHeight;
     } else {
         Height = 0.0;
     }
     
-    // 4. Obliczamy pozycje wierzcholka w przestrzeni swiata (juz po przesunieciu)
+    // 4. Obliczamy pozycje wierzcholka w przestrzeni swiata (po przesunieciu)
     fragPos = M * displacedPos; 
     
-    // 5. Ostateczna pozycja na ekranie
+    // 5. Ostateczna, przeliczona pozycja wierzcholka na ekranie
     gl_Position = P * V * M * displacedPos;
 }

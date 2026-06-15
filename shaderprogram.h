@@ -17,15 +17,11 @@ jeśli nie - napisz do Free Software Foundation, Inc., 59 Temple
 Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 */
 
-
 #ifndef SHADERPROGRAM_H
 #define SHADERPROGRAM_H
 
-
 #include <GL/glew.h>
 #include "stdio.h"
-
-
 
 class ShaderProgram {
 private:
@@ -42,8 +38,4 @@ public:
 	GLuint u(const char* variableName); //Pobiera numer slotu związanego z daną zmienną jednorodną
 	GLuint a(const char* variableName); //Pobiera numer slotu związanego z danym atrybutem
 };
-
-
-
-
 #endif

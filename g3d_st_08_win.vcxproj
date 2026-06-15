@@ -44,9 +44,11 @@
   <ItemGroup>
     <Image Include="asfalt.png" />
     <Image Include="kamienica.png" />
+    <Image Include="niebo.png" />
     <Image Include="trawa.png" />
   </ItemGroup>
   <ItemGroup>
+    <Media Include="crash.wav" />
     <Media Include="muzyka.wav" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
